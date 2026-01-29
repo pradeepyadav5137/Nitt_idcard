@@ -1,0 +1,79 @@
+import mongoose from 'mongoose';
+
+const applicationSchema = new mongoose.Schema({
+  applicationId: {
+    type: String,
+    unique: true,
+    required: true
+  },
+  userType: {
+    type: String,
+    enum: ['student', 'faculty', 'staff'],
+    required: true
+  },
+  email: {
+    type: String,
+    required: true,
+    lowercase: true
+  },
+  
+  // Student fields
+  rollNo: String,
+  name: String,
+  fatherName: String,
+  programme: String,
+  branch: String,
+  batch: String,
+  
+  // Faculty/Staff fields
+  staffNo: String,
+  staffName: String,
+  title: String,
+  designation: String,
+  department: String,
+  joiningDate: Date,
+  
+  // Common fields
+  phone: String,
+  dob: Date,
+  gender: String,
+  bloodGroup: String,
+  
+  // Address
+  addressLine1: String,
+  addressLine2: String,
+  district: String,
+  state: String,
+  pinCode: String,
+  
+  // Document request
+  requestCategory: {
+    type: String,
+    enum: ['Lost', 'Damaged', 'Correction', 'New']
+  },
+  reasonDetails: String,
+  
+  // Files
+  photoPath: String,
+  firPath: String,
+  paymentPath: String,
+  
+  // Status
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  adminNotes: String,
+  
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+export default mongoose.model('Application', applicationSchema);
