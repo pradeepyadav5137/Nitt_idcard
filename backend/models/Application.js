@@ -42,12 +42,22 @@ const applicationSchema = new mongoose.Schema({
   bloodGroup: String,
   
   // Address
+  address: String,
   addressLine1: String,
   addressLine2: String,
   district: String,
   state: String,
   pinCode: String,
   
+  // Student additional fields
+  motherName: String,
+  semester: String,
+  hostel: String,
+  roomNo: String,
+  firNumber: String,
+  firDate: Date,
+  policeStation: String,
+
   // Document request
   requestCategory: {
     type: String,

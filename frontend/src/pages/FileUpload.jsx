@@ -738,7 +738,7 @@ export default function FileUpload() {
 
     setTimeout(() => {
       setLoading(false)
-      navigate('/preview')
+      navigate('/preview', { state: { files: files } })
     }, 1000)
   }
 
