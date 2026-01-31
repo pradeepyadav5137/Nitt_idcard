@@ -1132,19 +1132,12 @@ export default function FacultyStaffFlow() {
         photo: photo ? photo.name : 'No photo'
       })
       
-      // Generate PDF for user
-      generateFacultyStaffPdf({ 
-        ...formData, 
-        email: verifiedEmail,
-        photo: photo ? 'Yes' : 'No'
-      }, type)
-      
-      // Uncomment to actually submit to backend
-      // const result = await applicationAPI.submit(formDataToSend)
-      // console.log('Submission result:', result)
+      // Submit to backend
+      const result = await applicationAPI.submit(formDataToSend)
+      const realApplicationId = result.applicationId || result.id || applicationId
       
       // Show success and redirect
-      alert('Application submitted successfully! PDF has been downloaded.')
+      alert('Application submitted successfully!')
       
       // Clear local storage
       localStorage.removeItem('token')
@@ -1152,7 +1145,7 @@ export default function FacultyStaffFlow() {
       localStorage.removeItem('userType')
       
       // Navigate to success page
-      navigate(`/success/${applicationId}`)
+      navigate(`/success/${realApplicationId}`, { state: { application: result.application } })
     } catch (err) {
       setError(err.message || 'Submission failed. Please try again.')
     } finally {

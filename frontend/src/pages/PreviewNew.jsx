@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
+import { applicationAPI } from '../services/api'
 
 const PreviewNew = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [formData, setFormData] = useState(null)
   const [loading, setLoading] = useState(false)
   
@@ -36,21 +38,40 @@ const PreviewNew = () => {
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      const year = new Date().getFullYear()
-      const randomNum = Math.floor(10000 + Math.random() * 90000)
-      const applicationId = `NITT-DUP-${year}-${randomNum}`
+      const files = location.state?.files || {}
+      const userType = localStorage.getItem('userType') || 'student'
       
-      const application = {
-        id: applicationId,
-        ...formData,
-        status: 'pending',
-        submittedAt: new Date().toISOString()
+      const form = new FormData()
+      form.append('userType', userType)
+
+      // Append all text fields
+      Object.keys(formData).forEach(key => {
+        if (formData[key] !== null && formData[key] !== undefined) {
+          form.append(key, formData[key])
+        }
+      })
+
+      // Map permanentAddress to address if it exists
+      if (formData.permanentAddress && !formData.address) {
+        form.append('address', formData.permanentAddress)
       }
       
-      localStorage.setItem('currentApplication', JSON.stringify(application))
-      navigate(`/success/${applicationId}`)
+      // Append files
+      if (files.photo) form.append('photo', files.photo)
+      if (files.fir) form.append('fir', files.fir)
+      if (files.payment) form.append('payment', files.payment)
+
+      const response = await applicationAPI.submit(form)
+      const applicationId = response.applicationId || response.id
+
+      // Clear localStorage data after successful submission
+      localStorage.removeItem('formData')
+      localStorage.removeItem('uploadedFiles')
+
+      navigate(`/success/${applicationId}`, { state: { application: response.application } })
     } catch (err) {
-      console.error(err)
+      console.error('Submission error:', err)
+      alert(err.message || 'Failed to submit application. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -673,24 +694,6 @@ const PreviewNew = () => {
           marginTop: '40px',
           flexWrap: 'wrap'
         }}>
-          <button 
-            onClick={generatePDF}
-            style={{
-              padding: '14px 28px',
-              background: '#f7fafc',
-              color: '#2d3748',
-              border: '1px solid #cbd5e0',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              flex: '1',
-              minWidth: '140px'
-            }}
-          >
-            Download PDF
-          </button>
-          
           <button 
             onClick={handleEdit}
             style={{
