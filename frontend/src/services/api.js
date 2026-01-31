@@ -344,7 +344,7 @@ export const applicationAPI = {
   // Get Application by ID
   getById: async (id) => {
     try {
-      const response = await api.get(`/applications/${id}`)
+      const response = await api.get(`/applications/status/${id}`)
       return response.data
     } catch (error) {
       console.error('❌ Get Application Error:', error.response?.data || error.message)

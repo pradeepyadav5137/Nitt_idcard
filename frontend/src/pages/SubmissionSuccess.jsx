@@ -1,10 +1,44 @@
 'use client';
 
-import { Link, useParams } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useParams, useLocation } from 'react-router-dom'
+import { applicationAPI } from '../services/api'
+import { generateStudentPDF, generateFacultyStaffPDF } from '../services/pdfGenerator'
 import './Success.css'
 
 export default function SubmissionSuccess() {
   const { applicationId } = useParams()
+  const location = useLocation()
+  const [application, setApplication] = useState(location.state?.application || null)
+  const [loading, setLoading] = useState(!application)
+
+  useEffect(() => {
+    if (!application) {
+      const fetchApplication = async () => {
+        try {
+          const res = await applicationAPI.getById(applicationId)
+          if (res.success) {
+            setApplication(res.application)
+          }
+        } catch (err) {
+          console.error('Error fetching application:', err)
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchApplication()
+    }
+  }, [applicationId, application])
+
+  const handleDownloadPDF = () => {
+    if (!application) return
+
+    if (application.userType === 'student') {
+      generateStudentPDF(application)
+    } else {
+      generateFacultyStaffPDF(application)
+    }
+  }
 
   return (
     <div className="success-container">
@@ -22,15 +56,26 @@ export default function SubmissionSuccess() {
         <div className="next-steps">
           <h3>What&apos;s Next?</h3>
           <ol>
-            <li>Your application will be reviewed by the administration</li>
-            <li>You will receive an email notification once your application is processed</li>
-            <li>Collect your ID card from the institute counter after approval</li>
+            <li><strong>Download and Print</strong> your application form using the button below.</li>
+            <li>Submit the printed form to the <strong>Library</strong> for verification.</li>
+            <li>Ensure you have all required attachments (Photo, FIR copy, Payment receipt as applicable).</li>
+            <li>Your application will be reviewed by the administration.</li>
           </ol>
         </div>
 
-        <Link to="/" className="btn btn-primary">
-          Return to Home
-        </Link>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', justifyContent: 'center', marginTop: '20px' }}>
+          <button
+            onClick={handleDownloadPDF}
+            className="btn btn-primary"
+            disabled={loading || !application}
+          >
+            {loading ? 'Loading...' : 'Download Application PDF'}
+          </button>
+
+          <Link to="/" className="btn btn-secondary">
+            Return to Home
+          </Link>
+        </div>
       </div>
     </div>
   )
