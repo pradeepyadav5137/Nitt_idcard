@@ -32,9 +32,11 @@ const applicationSchema = new mongoose.Schema({
   designation: String,
   department: String,
   joiningDate: Date,
+  retirementDate: Date,
   
   // Common fields
   phone: String,
+  parentMobile: String,
   dob: Date,
   gender: String,
   bloodGroup: String,
@@ -53,10 +55,11 @@ const applicationSchema = new mongoose.Schema({
   },
   reasonDetails: String,
   
-  // Files
+  // File URLs (local path or Firebase Storage URL)
   photoPath: String,
   firPath: String,
   paymentPath: String,
+  applicationPdfUrl: String,
   
   // Status
   status: {

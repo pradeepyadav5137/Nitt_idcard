@@ -117,6 +117,21 @@
   cursor: not-allowed;
 }
 
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 8px;
+  width: auto;
+}
+
+.btn-link:hover {
+  color: #0f2847;
+}
+
 .error-message {
   background: #fee;
   color: #c33;

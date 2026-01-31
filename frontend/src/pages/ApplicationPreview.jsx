@@ -198,6 +198,28 @@ export default function ApplicationPreview() {
         )}
 
         {isFacultyOrStaff && (
+          //   <div className="preview-section">
+          //     <div className="preview-grid">
+          //       <div><strong>Name of the Staff:</strong> {formData.staffName || formData.name}</div>
+          //       <div><strong>Staff No.:</strong> {formData.staffNo}</div>
+          //       <div><strong>Designation:</strong> {formData.designation}</div>
+          //       <div><strong>Title:</strong> {formData.title}</div>
+          //       <div><strong>Gender:</strong> {formData.gender}</div>
+          //       <div><strong>Blood Group:</strong> {formData.bloodGroup}</div>
+          //       <div><strong>Dept./Section:</strong> {formData.department}</div>
+          //       <div><strong>D.O.B:</strong> {formData.dob}</div>
+          //       <div><strong>Date of Joining:</strong> {formData.joiningDate}</div>
+          //       <div><strong>Date of Retirement:</strong> {formData.retirementDate || ''}</div>
+          //       <div><strong>Contact No.:</strong> {formData.phone}</div>
+          //       <div><strong>Email ID:</strong> {formData.email}</div>
+          //     </div>
+          //     <div style={{ marginTop: '16px' }}>
+          //       <strong>Request Category:</strong> {formData.requestCategory}</strong>
+          //     </div>
+          //     <div style={{ marginTop: '8px' }}>
+          //       <strong>Reason / Details:</strong> {formData.reasonDetails}
+          //     </div>
+          //   </div>
           <div className="preview-section">
             <div className="preview-grid">
               <div><strong>Name of the Staff:</strong> {formData.staffName || formData.name}</div>
@@ -213,14 +235,18 @@ export default function ApplicationPreview() {
               <div><strong>Contact No.:</strong> {formData.phone}</div>
               <div><strong>Email ID:</strong> {formData.email}</div>
             </div>
+
             <div style={{ marginTop: '16px' }}>
-              <strong>Request Category:</strong> {formData.requestCategory}</strong>
+              <strong>Request Category:</strong> {formData.requestCategory}
             </div>
+
             <div style={{ marginTop: '8px' }}>
               <strong>Reason / Details:</strong> {formData.reasonDetails}
             </div>
           </div>
+
         )}
+
 
         <form onSubmit={handleSubmit}>
           <div className="form-group" style={{ padding: '15px', background: '#f5f5f5', borderRadius: '4px' }}>

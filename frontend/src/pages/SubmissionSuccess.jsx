@@ -20,11 +20,11 @@ export default function SubmissionSuccess() {
         </div>
 
         <div className="next-steps">
-          <h3>What's Next?</h3>
+          <h3>What&apos;s Next?</h3>
           <ol>
-            <li>Your application will be reviewed by the library administration</li>
+            <li>Your application will be reviewed by the administration</li>
             <li>You will receive an email notification once your application is processed</li>
-            <li>Collect your ID card from the library counter after approval</li>
+            <li>Collect your ID card from the institute counter after approval</li>
           </ol>
         </div>
 

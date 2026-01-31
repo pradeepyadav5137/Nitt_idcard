@@ -1,71 +1,181 @@
+// import { Link } from 'react-router-dom'
+// import './Home.css'
+
+// export default function Home() {
+//   return (
+//     <div className="home">
+//       <section className="hero">
+//         <h2>Institute ID Card Re-issue Application</h2>
+//         <p>National Institute of Technology Tiruchirappalli</p>
+//         <div className="role-cards">
+//           <Link to="/apply/student" className="role-card">
+//             <div className="role-icon">👨‍🎓</div>
+//             <h3>Apply as Student</h3>
+//             <p>B.Tech, M.Tech, Ph.D – verify with roll number and complete application</p>
+//           </Link>
+//           <Link to="/apply/staff" className="role-card">
+//             <div className="role-icon">👨‍🏫</div>
+//             <h3>Apply as Faculty / Staff</h3>
+//             <p>Verify with institute webmail and submit your application</p>
+//           </Link>
+//           <Link to="/admin-login" className="role-card role-card-admin">
+//             <div className="role-icon">🔐</div>
+//             <h3>Admin Login</h3>
+//             <p>Access admin panel to verify applications</p>
+//           </Link>
+//         </div>
+//       </section>
+//     </div>
+//   )
+// }
+
 import { Link } from 'react-router-dom'
 import './Home.css'
 
 export default function Home() {
   return (
     <div className="home">
+      {/* Hero Section */}
       <section className="hero">
-        <h2>Institute ID Card Re-issue Application</h2>
-        <p>Apply for a duplicate ID card through our online portal</p>
-        <div className="role-cards">
-          <Link to="/verify-email/student" className="role-card">
-            <div className="role-icon">👨‍🎓</div>
-            <h3>Student</h3>
-            <p>For B.Tech, M.Tech, Ph.D students</p>
-          </Link>
-          <Link to="/verify-email/faculty" className="role-card">
-            <div className="role-icon">👨‍🏫</div>
-            <h3>Faculty</h3>
-            <p>For teaching staff and faculty members</p>
-          </Link>
-          <Link to="/verify-email/staff" className="role-card">
-            <div className="role-icon">👔</div>
-            <h3>Staff</h3>
-            <p>For administrative and support staff</p>
-          </Link>
-        </div>
-      </section>
-
-      <section className="features">
-        <h2>How It Works</h2>
-        <div className="steps">
-          <div className="step">
-            <div className="step-number">1</div>
-            <h4>Email Verification</h4>
-            <p>Verify your email with OTP</p>
-          </div>
-          <div className="step">
-            <div className="step-number">2</div>
-            <h4>Fill Details</h4>
-            <p>Complete your application form</p>
-          </div>
-          <div className="step">
-            <div className="step-number">3</div>
-            <h4>Upload Documents</h4>
-            <p>Submit required documents and photos</p>
-          </div>
-          <div className="step">
-            <div className="step-number">4</div>
-            <h4>Submit Application</h4>
-            <p>Review and submit your application</p>
+        <div className="hero-content">
+          <h1>Duplicate ID Card Re-issue Portal</h1>
+          <p>National Institute of Technology Tiruchirappalli</p>
+          <div className="hero-subtitle">
+            Select your category to begin the application process
           </div>
         </div>
       </section>
 
-      <section className="info">
-        <h2>Required Documents</h2>
-        <div className="requirements">
-          <div className="req-item">
-            <h4>Passport Photo</h4>
-            <p>4x6 cm, recent color photograph</p>
+      {/* Role Selection Cards */}
+      <section className="role-selection">
+        <div className="container">
+          <div className="role-cards">
+            <Link to="/apply/student" className="role-card">
+              <div className="role-card-header">
+                <div className="role-icon student-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                    <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                  </svg>
+                </div>
+                <h3>Student</h3>
+              </div>
+              <div className="role-card-body">
+                <p>For currently enrolled students seeking duplicate ID card</p>
+                <ul className="role-features">
+                  <li>Verify with Roll Number</li>
+                  <li>B.Tech / M.Tech / Ph.D</li>
+                  <li>Online Application</li>
+                </ul>
+              </div>
+              <div className="role-card-footer">
+                <span className="apply-arrow">Apply Now →</span>
+              </div>
+            </Link>
+
+            <Link to="/apply/faculty" className="role-card">
+              <div className="role-card-header">
+                <div className="role-icon faculty-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </div>
+                <h3>Faculty / Staff</h3>
+              </div>
+              <div className="role-card-body">
+                <p>For faculty members and staff employees</p>
+                <ul className="role-features">
+                  <li>Verify with Institute Email</li>
+                  <li>Teaching & Non-Teaching Staff</li>
+                  <li>Streamlined Process</li>
+                </ul>
+              </div>
+              <div className="role-card-footer">
+                <span className="apply-arrow">Apply Now →</span>
+              </div>
+            </Link>
           </div>
-          <div className="req-item">
-            <h4>FIR/Lost Report</h4>
-            <p>Copy of FIR or lost document report</p>
+
+          {/* Admin Link */}
+          <div className="admin-link-wrapper">
+            <Link to="/admin-login" className="admin-link">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              Admin Login
+            </Link>
           </div>
-          <div className="req-item">
-            <h4>Payment Receipt</h4>
-            <p>Proof of payment (Students & Staff)</p>
+        </div>
+      </section>
+
+      {/* Application Process Steps */}
+      <section className="process-section">
+        <div className="container">
+          <h2 className="section-title">Application Process</h2>
+          <p className="section-subtitle">Follow these simple steps to complete your application</p>
+          
+          <div className="steps-grid">
+            <div className="step-item">
+              <div className="step-number">1</div>
+              <h4>Email Verification</h4>
+              <p>Verify your identity using your institute email or roll number</p>
+            </div>
+            
+            <div className="step-item">
+              <div className="step-number">2</div>
+              <h4>Fill Application</h4>
+              <p>Complete the application form with required details</p>
+            </div>
+            
+            <div className="step-item">
+              <div className="step-number">3</div>
+              <h4>Upload Documents</h4>
+              <p>Submit necessary documents including FIR copy and photo</p>
+            </div>
+            
+            <div className="step-item">
+              <div className="step-number">4</div>
+              <h4>Review & Submit</h4>
+              <p>Preview your application and submit for approval</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Requirements Section */}
+      <section className="requirements-section">
+        <div className="container">
+          <h2 className="section-title">Required Documents</h2>
+          
+          <div className="requirements-grid">
+            <div className="requirement-card">
+              <div className="req-icon">📸</div>
+              <h4>Passport Photo</h4>
+              <p>Recent passport-sized photograph (JPG/PNG format, max 5MB)</p>
+            </div>
+            
+            <div className="requirement-card">
+              <div className="req-icon">📄</div>
+              <h4>FIR Copy</h4>
+              <p>First Information Report or Lost Document Report (PDF/Image)</p>
+            </div>
+            
+            <div className="requirement-card student-only">
+              <div className="req-icon">💳</div>
+              <h4>Payment Receipt</h4>
+              <p>Fee payment receipt - ₹500 (For Students Only)</p>
+            </div>
+          </div>
+
+          <div className="info-note">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            <p>All documents must be clear and legible. File size should not exceed 5MB per document.</p>
           </div>
         </div>
       </section>

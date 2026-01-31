@@ -3,10 +3,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
-import { applicationAPI, adminAPI } from '../services/api'
+import { applicationAPI, adminAPI, getUploadsBaseUrl } from '../services/api'
 import './Admin.css'
 
-const FILE_BASE_URL = 'http://localhost:5000'
+const FILE_BASE_URL = getUploadsBaseUrl?.() || 'http://localhost:5000'
+
+function docUrl(path) {
+  if (!path) return null
+  if (path.startsWith('http')) return path
+  return `${FILE_BASE_URL}/uploads/${path}`
+}
 
 const formatDate = (value) => {
   if (!value) return ''
@@ -115,6 +121,13 @@ export default function AdminDashboard() {
   const [selectedApp, setSelectedApp] = useState(null)
   const [action, setAction] = useState(null)
   const [notes, setNotes] = useState('')
+  const [showAddAdmin, setShowAddAdmin] = useState(false)
+  const [addAdminUsername, setAddAdminUsername] = useState('')
+  const [addAdminEmail, setAddAdminEmail] = useState('')
+  const [addAdminPassword, setAddAdminPassword] = useState('')
+  const [addAdminError, setAddAdminError] = useState('')
+  const [addAdminLoading, setAddAdminLoading] = useState(false)
+  const [addAdminSuccess, setAddAdminSuccess] = useState('')
 
   useEffect(() => {
     const token = localStorage.getItem('adminToken')
@@ -129,11 +142,11 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     try {
       const [appRes, statsRes] = await Promise.all([
-        applicationAPI.getAll(),
+        adminAPI.getAll(),
         adminAPI.getStats()
       ])
-      setApplications(appRes.data.applications || [])
-      setStats(statsRes.data.stats)
+      setApplications(appRes.applications || [])
+      setStats(statsRes.stats)
     } catch (err) {
       console.error('Error fetching data:', err)
     }
@@ -174,6 +187,24 @@ export default function AdminDashboard() {
     navigate('/')
   }
 
+  const handleAddAdmin = async (e) => {
+    e.preventDefault()
+    setAddAdminError('')
+    setAddAdminSuccess('')
+    setAddAdminLoading(true)
+    try {
+      await adminAPI.addAdmin(addAdminUsername.trim(), addAdminEmail.trim(), addAdminPassword)
+      setAddAdminSuccess('Admin added successfully.')
+      setAddAdminUsername('')
+      setAddAdminEmail('')
+      setAddAdminPassword('')
+      setTimeout(() => { setShowAddAdmin(false); setAddAdminSuccess(''); }, 2000)
+    } catch (err) {
+      setAddAdminError(err.message || 'Failed to add admin')
+    }
+    setAddAdminLoading(false)
+  }
+
   const filteredApps = filter === 'all' 
     ? applications 
     : applications.filter(app => app.status === filter)
@@ -184,10 +215,40 @@ export default function AdminDashboard() {
     <div className="admin-container">
       <div className="admin-header">
         <h2>Admin Dashboard</h2>
-        <button onClick={handleLogout} className="btn btn-secondary">
-          Logout
-        </button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button onClick={() => setShowAddAdmin(!showAddAdmin)} className="btn btn-secondary">
+            {showAddAdmin ? 'Hide Add Admin' : 'Add new admin'}
+          </button>
+          <button onClick={handleLogout} className="btn btn-secondary">
+            Logout
+          </button>
+        </div>
       </div>
+
+      {showAddAdmin && (
+        <div className="form-card" style={{ marginBottom: '20px', maxWidth: '400px' }}>
+          <h3>Add new admin</h3>
+          {addAdminError && <div className="error-message">{addAdminError}</div>}
+          {addAdminSuccess && <div className="success-message">{addAdminSuccess}</div>}
+          <form onSubmit={handleAddAdmin}>
+            <div className="form-group">
+              <label>Username *</label>
+              <input type="text" value={addAdminUsername} onChange={(e) => setAddAdminUsername(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label>Email *</label>
+              <input type="email" value={addAdminEmail} onChange={(e) => setAddAdminEmail(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label>Password *</label>
+              <input type="password" value={addAdminPassword} onChange={(e) => setAddAdminPassword(e.target.value)} minLength={6} required />
+            </div>
+            <button type="submit" disabled={addAdminLoading} className="btn btn-primary">
+              {addAdminLoading ? 'Adding...' : 'Add admin'}
+            </button>
+          </form>
+        </div>
+      )}
 
       {stats && (
         <div className="stats-grid">
@@ -321,7 +382,7 @@ export default function AdminDashboard() {
                 <div className="doc-row">
                   <strong>Photo:</strong>
                   <img
-                    src={`${FILE_BASE_URL}/uploads/${selectedApp.photoPath}`}
+                    src={docUrl(selectedApp.photoPath)}
                     alt="Applicant"
                     style={{ maxWidth: '120px', maxHeight: '150px', display: 'block', marginTop: '8px' }}
                   />
@@ -343,11 +404,23 @@ export default function AdminDashboard() {
                 <div className="doc-row">
                   <strong>Payment Receipt:</strong>{' '}
                   <a
-                    href={`${FILE_BASE_URL}/uploads/${selectedApp.paymentPath}`}
+                    href={docUrl(selectedApp.paymentPath)}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     View Receipt
+                  </a>
+                </div>
+              )}
+              {selectedApp.applicationPdfUrl && (
+                <div className="doc-row">
+                  <strong>Application PDF:</strong>{' '}
+                  <a
+                    href={docUrl(selectedApp.applicationPdfUrl)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Download application PDF
                   </a>
                 </div>
               )}

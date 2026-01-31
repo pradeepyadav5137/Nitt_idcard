@@ -1,6 +1,12 @@
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import Application from '../models/Application.js';
+import { uploadToFirebase, isFirebaseEnabled } from '../config/firebase.js';
 
-// Generate unique application ID
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.join(__dirname, '../uploads');
+
 const generateAppId = (userType) => {
   const prefix = userType === 'student' ? 'STU' : userType === 'faculty' ? 'FAC' : 'STF';
   const year = new Date().getFullYear();
@@ -8,10 +14,29 @@ const generateAppId = (userType) => {
   return `NITT-${prefix}-${year}-${random}`;
 };
 
-// Submit application
+async function saveFile(fieldName, file, applicationId) {
+  const ext = path.extname(file.originalname) || (file.mimetype?.includes('png') ? '.png' : '.jpg');
+  const basePath = `applications/${applicationId}/${fieldName}${ext}`;
+
+  if (isFirebaseEnabled()) {
+    const url = await uploadToFirebase(file.buffer, basePath, file.mimetype || 'application/octet-stream');
+    return url;
+  }
+
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+  const dir = path.join(uploadsDir, applicationId);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const filename = `${fieldName}-${Date.now()}${ext}`;
+  const filepath = path.join(dir, filename);
+  fs.writeFileSync(filepath, file.buffer);
+  return `${applicationId}/${filename}`;
+}
+
+// Submit application (with optional photo, fir, payment, applicationPdf files)
 export const submitApplication = async (req, res) => {
   try {
-    const { userType, ...formData } = req.body;
+    const body = req.body || {};
+    const userType = body.userType;
 
     if (!userType || !['student', 'faculty', 'staff'].includes(userType)) {
       return res.status(400).json({ message: 'Invalid user type' });
@@ -19,15 +44,54 @@ export const submitApplication = async (req, res) => {
 
     const applicationId = generateAppId(userType);
 
-    const application = new Application({
+    const applicationData = {
       applicationId,
       userType,
-      ...formData,
-      photoPath: req.files?.photo?.[0]?.filename,
-      firPath: req.files?.fir?.[0]?.filename,
-      paymentPath: req.files?.payment?.[0]?.filename
-    });
+      email: body.email,
+      rollNo: body.rollNo,
+      name: body.name,
+      fatherName: body.fatherName,
+      programme: body.programme,
+      branch: body.branch,
+      batch: body.batch,
+      staffNo: body.staffNo,
+      staffName: body.staffName,
+      title: body.title,
+      designation: body.designation,
+      department: body.department,
+      joiningDate: body.joiningDate || undefined,
+      phone: body.phone,
+      dob: body.dob || undefined,
+      gender: body.gender,
+      bloodGroup: body.bloodGroup,
+      addressLine1: body.addressLine1,
+      addressLine2: body.addressLine2,
+      district: body.district,
+      state: body.state,
+      pinCode: body.pinCode,
+      requestCategory: body.requestCategory,
+      reasonDetails: body.reasonDetails,
+      photoPath: null,
+      firPath: null,
+      paymentPath: null,
+      applicationPdfUrl: null
+    };
 
+    const files = req.files || {};
+    if (files.photo?.[0]) {
+      applicationData.photoPath = await saveFile('photo', files.photo[0], applicationId);
+    }
+    if (files.fir?.[0]) {
+      applicationData.firPath = await saveFile('fir', files.fir[0], applicationId);
+    }
+    if (files.payment?.[0]) {
+      applicationData.paymentPath = await saveFile('payment', files.payment[0], applicationId);
+    }
+    if (files.applicationPdf?.[0]) {
+      applicationData.applicationPdfUrl = await saveFile('applicationPdf', files.applicationPdf[0], applicationId);
+    }
+
+    const application = new Application(applicationData);
     await application.save();
 
     res.json({
@@ -42,7 +106,6 @@ export const submitApplication = async (req, res) => {
   }
 };
 
-// Get application status
 export const getApplicationStatus = async (req, res) => {
   try {
     const application = await Application.findOne({
@@ -63,7 +126,6 @@ export const getApplicationStatus = async (req, res) => {
   }
 };
 
-// Get all applications (admin)
 export const getAllApplications = async (req, res) => {
   try {
     const applications = await Application.find({}).sort({ createdAt: -1 });
@@ -76,4 +138,3 @@ export const getAllApplications = async (req, res) => {
     res.status(500).json({ message: 'Error fetching applications' });
   }
 };
-

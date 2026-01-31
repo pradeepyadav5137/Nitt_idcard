@@ -1,144 +1,205 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import axios from 'axios'
 
-const api = async (endpoint, options = {}) => {
-  const url = `${API_BASE_URL}${endpoint}`;
-  
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      },
-      credentials: 'include', // Include cookies
-      ...options
-    });
+// ===== API CONFIGURATION =====
+// Change this to your backend URL
+const API_BASE_URL = 'http://localhost:5000/api'
 
-    const data = await response.json();
+// For production, change to:
+// const API_BASE_URL = 'https://your-backend-domain.com/api'
 
-    if (!response.ok) {
-      throw new Error(data.error || data.errors?.[0] || 'An error occurred');
+// Create axios instance
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  timeout: 10000 // 10 second timeout
+})
+
+// Add token to requests if available
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
     }
-
-    return data;
-  } catch (error) {
-    throw new Error(error.message || 'Network error');
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
   }
-};
+)
 
-// Auth Services
-export const requestOTP = (endpoint, payload) => {
-  return api(endpoint, {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-};
-
-export const verifyOTP = (payload) => {
-  return api('/auth/verify-otp', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-};
-
-// Application Services
-export const getApplication = (appId) => {
-  return api(`/application/${appId}`, {
-    method: 'GET'
-  });
-};
-
-export const updateApplicationForm = (appId, formData) => {
-  return api(`/application/${appId}/form`, {
-    method: 'PUT',
-    body: JSON.stringify(formData)
-  });
-};
-
-export const uploadFiles = async (appId, files) => {
-  const formData = new FormData();
-  
-  if (files.photo) formData.append('photo', files.photo);
-  if (files.firCopy) formData.append('firCopy', files.firCopy);
-  if (files.paymentReceipt) formData.append('paymentReceipt', files.paymentReceipt);
-
-  const response = await fetch(`${API_BASE_URL}/application/${appId}/upload`, {
-    method: 'POST',
-    body: formData,
-    credentials: 'include'
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || 'Upload failed');
+// Handle response errors globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      // Server responded with error
+      console.error('API Error:', error.response.status, error.response.data)
+    } else if (error.request) {
+      // Request made but no response
+      console.error('Network Error: No response from server')
+    } else {
+      // Something else happened
+      console.error('Error:', error.message)
+    }
+    return Promise.reject(error)
   }
+)
 
-  return data;
-};
+// ===== AUTH API =====
+export const authAPI = {
+  // Send OTP
+  sendOTP: async (data) => {
+    try {
+      // Ensure data is properly formatted as JSON object
+      const payload = {
+        email: data.email || null,
+        rollNo: data.rollNo || null,
+        userType: data.userType || 'student'
+      }
 
-export const submitApplication = (appId) => {
-  return api(`/application/${appId}/submit`, {
-    method: 'POST'
-  });
-};
+      console.log('📤 Sending OTP request:', payload)
 
-// Admin Services
-export const adminLogin = (credentials) => {
-  return api('/admin/login', {
-    method: 'POST',
-    body: JSON.stringify(credentials)
-  });
-};
+      const response = await api.post('/auth/send-otp', payload)
+      console.log('✅ OTP Response:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ Send OTP Error:', error.response?.data || error.message)
+      throw error.response?.data || { message: 'Failed to send OTP' }
+    }
+  },
 
-export const adminLogout = () => {
-  return api('/admin/logout', {
-    method: 'POST'
-  });
-};
+  // Verify Email with OTP
+  verifyEmail: async (email, otp, userType) => {
+    try {
+      // Ensure proper JSON object format with userType
+      const payload = {
+        email: email,
+        otp: otp,
+        userType: userType || 'student'
+      }
 
-export const getDashboardStats = () => {
-  return api('/admin/dashboard/stats', {
-    method: 'GET'
-  });
-};
+      console.log('📤 Verifying OTP:', { email, otp: '******', userType })
 
-export const getApplications = (params = {}) => {
-  const queryString = new URLSearchParams(params).toString();
-  return api(`/admin/applications?${queryString}`, {
-    method: 'GET'
-  });
-};
+      const response = await api.post('/auth/verify-email', payload)
+      console.log('✅ Verify Response:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ Verify OTP Error:', error.response?.data || error.message)
+      throw error.response?.data || { message: 'OTP verification failed' }
+    }
+  }
+}
 
-export const getApplicationDetail = (appId) => {
-  return api(`/admin/applications/${appId}`, {
-    method: 'GET'
-  });
-};
+// ===== APPLICATION API =====
+export const applicationAPI = {
+  // Submit Application
+  submit: async (formData) => {
+    try {
+      console.log('📤 Submitting application...')
+      
+      const response = await api.post('/applications/submit', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      
+      console.log('✅ Application submitted:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ Submit Application Error:', error.response?.data || error.message)
+      throw error.response?.data || { message: 'Application submission failed' }
+    }
+  },
 
-export const approveApplication = (appId, notes = '') => {
-  return api(`/admin/applications/${appId}/approve`, {
-    method: 'PUT',
-    body: JSON.stringify({ adminNotes: notes })
-  });
-};
+  // Get Application by ID
+  getById: async (id) => {
+    try {
+      const response = await api.get(`/applications/${id}`)
+      return response.data
+    } catch (error) {
+      console.error('❌ Get Application Error:', error.response?.data || error.message)
+      throw error.response?.data || { message: 'Failed to fetch application' }
+    }
+  }
+}
 
-export const rejectApplication = (appId, rejectionReason, notes = '') => {
-  return api(`/admin/applications/${appId}/reject`, {
-    method: 'PUT',
-    body: JSON.stringify({ rejectionReason, adminNotes: notes })
-  });
-};
+// ===== ADMIN API =====
+export const adminAPI = {
+  // Admin Login
+  login: async (email, password) => {
+    try {
+      const response = await api.post('/admin/login', { email, password })
+      return response.data
+    } catch (error) {
+      console.error('❌ Admin Login Error:', error.response?.data || error.message)
+      throw error.response?.data || { message: 'Login failed' }
+    }
+  },
 
-export const softDeleteApplication = (appId) => {
-  return api(`/admin/applications/${appId}/soft-delete`, {
-    method: 'PUT'
-  });
-};
+  // Get All Applications
+  getApplications: async (filters = {}) => {
+    try {
+      const response = await api.get('/admin/applications', { params: filters })
+      return response.data
+    } catch (error) {
+      console.error('❌ Get Applications Error:', error.response?.data || error.message)
+      throw error.response?.data || { message: 'Failed to fetch applications' }
+    }
+  },
 
-export const hardDeleteApplication = (appId) => {
-  return api(`/admin/applications/${appId}/hard-delete`, {
-    method: 'DELETE'
-  });
-};
+  // Get Dashboard Stats
+  getDashboardStats: async () => {
+    try {
+      const response = await api.get('/admin/dashboard/stats')
+      return response.data
+    } catch (error) {
+      console.error('❌ Get Stats Error:', error.response?.data || error.message)
+      throw error.response?.data || { message: 'Failed to fetch stats' }
+    }
+  },
 
-export default api;
+  // Update Application Status
+  updateStatus: async (id, status, reason = null) => {
+    try {
+      const response = await api.patch(`/admin/applications/${id}/status`, {
+        status,
+        reason
+      })
+      return response.data
+    } catch (error) {
+      console.error('❌ Update Status Error:', error.response?.data || error.message)
+      throw error.response?.data || { message: 'Failed to update status' }
+    }
+  },
+
+  // Delete Application (Soft)
+  softDelete: async (id) => {
+    try {
+      const response = await api.delete(`/admin/applications/${id}`, {
+        data: { hardDelete: false }
+      })
+      return response.data
+    } catch (error) {
+      console.error('❌ Soft Delete Error:', error.response?.data || error.message)
+      throw error.response?.data || { message: 'Failed to delete application' }
+    }
+  },
+
+  // Delete Application (Hard)
+  hardDelete: async (id) => {
+    try {
+      const response = await api.delete(`/admin/applications/${id}`, {
+        data: { hardDelete: true }
+      })
+      return response.data
+    } catch (error) {
+      console.error('❌ Hard Delete Error:', error.response?.data || error.message)
+      throw error.response?.data || { message: 'Failed to permanently delete application' }
+    }
+  }
+}
+
+export default api

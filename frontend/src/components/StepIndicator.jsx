@@ -1,13 +1,10 @@
 import React from 'react';
 import '../styles/steps.css';
 
-const StepIndicator = ({ current = 1, total = 4 }) => {
-  const steps = [
-    { number: 1, label: 'Email Verify' },
-    { number: 2, label: 'Fill Form' },
-    { number: 3, label: 'Upload Docs' },
-    { number: 4, label: 'Submit' }
-  ];
+const StepIndicator = ({ current = 1, total = 4, labels }) => {
+  const defaultLabels = ['Verify', 'Form', 'Docs', 'Submit'];
+  const stepLabels = labels && labels.length >= total ? labels : defaultLabels.slice(0, total);
+  const steps = stepLabels.map((label, i) => ({ number: i + 1, label }));
 
   return (
     <div className="step-indicator">
