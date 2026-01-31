@@ -54,8 +54,8 @@ export default function Home() {
               <div className="role-card-header">
                 <div className="role-icon student-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                    <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                    <path d="M6 12v5c3 3 9 3 12 0v-5" />
                   </svg>
                 </div>
                 <h3>Student</h3>
@@ -73,12 +73,35 @@ export default function Home() {
               </div>
             </Link>
 
-            <Link to="/apply/faculty" className="role-card">
+            {/* <Link to="/apply/faculty" className="role-card">
               <div className="role-card-header">
                 <div className="role-icon faculty-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                     <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </div>
+                <h3>Faculty / Staff</h3>
+              </div>
+              <div className="role-card-body">
+                <p>For faculty members and staff employees</p>
+                <ul className="role-features">
+                  <li>Verify with Institute Email</li>
+                  <li>Teaching & Non-Teaching Staff</li>
+                  <li>Streamlined Process</li>
+                </ul>
+              </div>
+              <div className="role-card-footer">
+                <span className="apply-arrow">Apply Now →</span>
+              </div>
+            </Link> */}
+    
+            <Link to="/apply/faculty-staff" className="role-card">
+              <div className="role-card-header">
+                <div className="role-icon faculty-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
                   </svg>
                 </div>
                 <h3>Faculty / Staff</h3>
@@ -101,8 +124,8 @@ export default function Home() {
           <div className="admin-link-wrapper">
             <Link to="/admin-login" className="admin-link">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
               Admin Login
             </Link>
@@ -115,26 +138,26 @@ export default function Home() {
         <div className="container">
           <h2 className="section-title">Application Process</h2>
           <p className="section-subtitle">Follow these simple steps to complete your application</p>
-          
+
           <div className="steps-grid">
             <div className="step-item">
               <div className="step-number">1</div>
               <h4>Email Verification</h4>
               <p>Verify your identity using your institute email or roll number</p>
             </div>
-            
+
             <div className="step-item">
               <div className="step-number">2</div>
               <h4>Fill Application</h4>
               <p>Complete the application form with required details</p>
             </div>
-            
+
             <div className="step-item">
               <div className="step-number">3</div>
               <h4>Upload Documents</h4>
               <p>Submit necessary documents including FIR copy and photo</p>
             </div>
-            
+
             <div className="step-item">
               <div className="step-number">4</div>
               <h4>Review & Submit</h4>
@@ -148,20 +171,20 @@ export default function Home() {
       <section className="requirements-section">
         <div className="container">
           <h2 className="section-title">Required Documents</h2>
-          
+
           <div className="requirements-grid">
             <div className="requirement-card">
               <div className="req-icon">📸</div>
               <h4>Passport Photo</h4>
               <p>Recent passport-sized photograph (JPG/PNG format, max 5MB)</p>
             </div>
-            
+
             <div className="requirement-card">
               <div className="req-icon">📄</div>
               <h4>FIR Copy</h4>
-              <p>First Information Report or Lost Document Report (PDF/Image)</p>
+              <p>First Information Report or Lost Document Report (If ID Lost) (PDF/Image)</p>
             </div>
-            
+
             <div className="requirement-card student-only">
               <div className="req-icon">💳</div>
               <h4>Payment Receipt</h4>
@@ -171,9 +194,9 @@ export default function Home() {
 
           <div className="info-note">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="16" x2="12" y2="12"/>
-              <line x1="12" y1="8" x2="12.01" y2="8"/>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
             <p>All documents must be clear and legible. File size should not exceed 5MB per document.</p>
           </div>

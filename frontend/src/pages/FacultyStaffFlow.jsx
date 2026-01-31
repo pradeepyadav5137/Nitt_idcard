@@ -1,340 +1,1727 @@
-import { useState } from 'react'
+// 'use client';
+
+// import { useState, useEffect } from 'react'
+// import { useNavigate, useParams } from 'react-router-dom'
+// import { jsPDF } from 'jspdf'
+// import StepIndicator from '../components/StepIndicator'
+// import { authAPI, applicationAPI } from '../services/api'
+// import './FacultyFlow.css'
+
+// // Single flow steps for faculty/staff
+// const FACULTY_STAFF_STEPS = ['Email Verification', 'Application Form', 'Preview & Submit']
+
+// const formatDate = (dateString) => {
+//   if (!dateString) return ''
+//   try {
+//     const date = new Date(dateString)
+//     return date.toLocaleDateString('en-GB')
+//   } catch {
+//     return dateString
+//   }
+// }
+
+// const generateFacultyStaffPdf = (data, userType) => {
+//   const doc = new jsPDF('p', 'mm', 'a4')
+  
+//   // Header
+//   doc.setFontSize(16)
+//   doc.setFont('helvetica', 'bold')
+//   doc.text('NATIONAL INSTITUTE OF TECHNOLOGY TIRUCHIRAPPALLI', 105, 20, { align: 'center' })
+//   doc.setFontSize(11)
+//   doc.text('TAMIL NADU, INDIA-620015', 105, 27, { align: 'center' })
+//   doc.setFontSize(14)
+//   doc.text(`ID CARD FORM FOR ${userType.toUpperCase()}`, 105, 37, { align: 'center' })
+  
+//   // Instructions
+//   doc.setFontSize(10)
+//   doc.setFont('helvetica', 'italic')
+//   doc.text('Instructions:', 20, 50)
+//   doc.setFont('helvetica', 'normal')
+//   doc.text('The printed form must be submitted to the library for verification', 20, 57)
+//   doc.text('after being duly signed by the Registrar', 20, 64)
+  
+//   let y = 80
+//   doc.setFontSize(11)
+  
+//   const addField = (label, value) => {
+//     doc.setFont('helvetica', 'bold')
+//     doc.text(`${label}:`, 20, y)
+//     doc.setFont('helvetica', 'normal')
+//     doc.text(value || '', 70, y)
+//     y += 7
+//   }
+  
+//   addField('Request Category', data.requestCategory)
+//   if (data.dataToChange && data.dataToChange.length > 0) {
+//     addField('Data to be Changed', data.dataToChange.join(', '))
+//   }
+//   addField('Title', data.title)
+//   addField('Name', data.staffName)
+//   addField('Staff No', data.staffNo)
+//   addField('Designation', data.designation)
+//   addField('Department / Section', data.department)
+//   addField('Date of Birth', formatDate(data.dob))
+//   addField('Date of Joining', formatDate(data.joiningDate))
+//   if (data.retirementDate) {
+//     addField('Date of Retirement', formatDate(data.retirementDate))
+//   }
+//   addField('Gender', data.gender)
+//   addField('Blood Group', data.bloodGroup || 'Not specified')
+//   addField('Email ID', data.email)
+//   addField('Mobile Number', data.phone)
+//   addField('Address', data.address)
+  
+//   // Signature note
+//   y += 15
+//   doc.setFont('helvetica', 'italic')
+//   doc.setFontSize(9)
+//   doc.text('Note: This form must be printed and submitted with a passport-size photo', 20, y)
+//   doc.text('to the library after obtaining necessary signatures.', 20, y + 5)
+  
+//   const fileName = `${data.staffNo}_${userType}_form.pdf`
+//   doc.save(fileName)
+// }
+
+// export default function FacultyStaffFlow() {
+//   const { userType } = useParams() // 'faculty' or 'staff'
+//   const navigate = useNavigate()
+//   const type = userType || 'staff'
+  
+//   const [step, setStep] = useState(0)
+//   const [loading, setLoading] = useState(false)
+//   const [error, setError] = useState('')
+  
+//   const [email, setEmail] = useState('')
+//   const [otp, setOtp] = useState('')
+//   const [verificationSubstep, setVerificationSubstep] = useState('email')
+//   const [verifiedEmail, setVerifiedEmail] = useState('')
+  
+//   const [formData, setFormData] = useState({
+//     // Request details
+//     requestCategory: '',
+//     dataToChange: [],
+//     otherDataChange: '',
+    
+//     // Personal details
+//     title: '',
+//     staffName: '',
+//     staffNo: '',
+//     designation: '',
+//     department: '',
+//     dob: '',
+//     joiningDate: '',
+//     retirementDate: '',
+//     gender: '',
+//     bloodGroup: '',
+    
+//     // Contact details
+//     phone: '',
+//     address: '',
+    
+//     // Additional for specific categories
+//     correctionDetails: '',
+//     officeOrderAttached: false
+//   })
+  
+//   // Department options
+//   const departmentOptions = [
+//     'Civil Engineering',
+//     'Computer Science & Engineering',
+//     'Electrical & Electronics Engineering',
+//     'Electronics & Communication Engineering',
+//     'Instrumentation & Control Engineering',
+//     'Mechanical Engineering',
+//     'Metallurgical and Materials Engineering',
+//     'Production Engineering',
+//     'Chemical Engineering',
+//     'Architecture',
+//     'Integrated Teacher Education Programme (ITEP)',
+//     'Physics',
+//     'Chemistry',
+//     'Mathematics',
+//     'Computer Science',
+//     'Computer Applications',
+//     'English',
+//     'Management Studies',
+//     'Other'
+//   ]
+  
+//   // Data change options
+//   const dataChangeOptions = [
+//     'Name',
+//     'Address',
+//     'Designation',
+//     'Email ID',
+//     'Date Of Birth',
+//     'Contact No',
+//     'Transfer / Promotion / Redesignation',
+//     'Other'
+//   ]
+  
+//   // Handle Send OTP
+//   const handleSendOtp = async (e) => {
+//     e.preventDefault()
+//     setError('')
+//     const emailTrimmed = email.trim().toLowerCase()
+    
+//     if (!emailTrimmed.endsWith('@nitt.edu')) {
+//       setError('Only @nitt.edu institute email is allowed')
+//       return
+//     }
+    
+//     setLoading(true)
+//     try {
+//       await authAPI.sendOTP({ 
+//         email: emailTrimmed, 
+//         userType: type 
+//       })
+//       setVerificationSubstep('otp')
+//     } catch (err) {
+//       setError(err.message || 'Failed to send OTP')
+//     }
+//     setLoading(false)
+//   }
+  
+//   // Handle Verify OTP - FIXED
+//   const handleVerifyOtp = async (e) => {
+//     e.preventDefault()
+//     setError('')
+//     setLoading(true)
+    
+//     try {
+//       // CORRECT: Pass 3 separate parameters
+//       const res = await authAPI.verifyEmail(
+//         email.trim().toLowerCase(),  // email
+//         otp.trim(),                   // otp  
+//         type                         // userType
+//       )
+      
+//       localStorage.setItem('token', res.token)
+//       localStorage.setItem('email', email.trim().toLowerCase())
+//       localStorage.setItem('userType', type)
+      
+//       setVerifiedEmail(email.trim().toLowerCase())
+//       setStep(1) // Move to form step
+//     } catch (err) {
+//       setError(err.message || 'Invalid OTP. Please try again.')
+//     }
+//     setLoading(false)
+//   }
+  
+//   const handleInputChange = (e) => {
+//     const { name, value, type: inputType, checked } = e.target
+    
+//     if (inputType === 'checkbox') {
+//       if (name === 'dataToChange') {
+//         const updatedData = formData.dataToChange.includes(value)
+//           ? formData.dataToChange.filter(item => item !== value)
+//           : [...formData.dataToChange, value]
+//         setFormData(prev => ({ ...prev, dataToChange: updatedData }))
+//       } else {
+//         setFormData(prev => ({ ...prev, [name]: checked }))
+//       }
+//     } else {
+//       setFormData(prev => ({ ...prev, [name]: value }))
+//     }
+//   }
+  
+//   const handleFormSubmit = (e) => {
+//     e.preventDefault()
+    
+//     // Validation
+//     if (!formData.requestCategory) {
+//       setError('Please select a request category')
+//       return
+//     }
+    
+//     if (!formData.title || !formData.staffName || !formData.staffNo || !formData.designation || !formData.department) {
+//       setError('Please fill all required fields')
+//       return
+//     }
+    
+//     setStep(2)
+//   }
+  
+//   const handleFinalSubmit = async () => {
+//     setError('')
+//     setLoading(true)
+    
+//     try {
+//       const payload = {
+//         userType: type,
+//         email: verifiedEmail,
+//         ...formData,
+//         submittedAt: new Date().toISOString()
+//       }
+      
+//       // Generate PDF
+//       generateFacultyStaffPdf(payload, type)
+      
+//       // Submit to backend
+//       const form = new FormData()
+//       Object.keys(payload).forEach(key => {
+//         if (payload[key] !== undefined && payload[key] !== null) {
+//           if (Array.isArray(payload[key])) {
+//             form.append(key, JSON.stringify(payload[key]))
+//           } else {
+//             form.append(key, payload[key])
+//           }
+//         }
+//       })
+      
+//       const result = await applicationAPI.submit(form)
+      
+//       // Clear and navigate to success
+//       localStorage.removeItem('token')
+//       localStorage.removeItem('email')
+//       localStorage.removeItem('userType')
+      
+//       navigate(`/success/${result.applicationId || result.id}`)
+//     } catch (err) {
+//       setError(err.message || 'Submission failed. Please try again.')
+//     } finally {
+//       setLoading(false)
+//     }
+//   }
+  
+//   // Step 0: Email Verification
+//   if (step === 0) {
+//     return (
+//       <div className="faculty-form-container">
+//         <StepIndicator 
+//           current={0} 
+//           total={FACULTY_STAFF_STEPS.length} 
+//           labels={FACULTY_STAFF_STEPS} 
+//         />
+        
+//         <div className="faculty-form-card">
+//           <h2>Email Verification</h2>
+//           <p className="form-description">
+//             Enter your {type} institute email (@nitt.edu) to receive verification OTP
+//           </p>
+          
+//           <div className="info-box">
+//             <h4>Email Verification Instructions:</h4>
+//             <ul>
+//               <li>Use your institute email address (@nitt.edu)</li>
+//               <li>A 6-digit OTP will be sent to your email</li>
+//               <li>OTP is valid for 5 minutes</li>
+//             </ul>
+//           </div>
+          
+//           {error && <div className="error-message">{error}</div>}
+          
+//           {verificationSubstep === 'email' ? (
+//             <form onSubmit={handleSendOtp}>
+//               <div className="form-group">
+//                 <label>Institute Email *</label>
+//                 <input
+//                   type="email"
+//                   value={email}
+//                   onChange={(e) => setEmail(e.target.value)}
+//                   placeholder="your.name@nitt.edu"
+//                   required
+//                   disabled={loading}
+//                 />
+//                 <small>Only @nitt.edu emails are allowed for {type}</small>
+//               </div>
+              
+//               <div className="button-group">
+//                 <button 
+//                   type="submit" 
+//                   className="btn btn-primary"
+//                   disabled={loading}
+//                 >
+//                   {loading ? 'Sending OTP...' : 'Send OTP'}
+//                 </button>
+                
+//                 <button 
+//                   type="button" 
+//                   className="btn btn-secondary"
+//                   onClick={() => navigate('/')}
+//                 >
+//                   Back to Home
+//                 </button>
+//               </div>
+//             </form>
+//           ) : (
+//             <form onSubmit={handleVerifyOtp}>
+//               <div className="form-group">
+//                 <label>OTP sent to {email}</label>
+//                 <input
+//                   type="text"
+//                   value={otp}
+//                   onChange={(e) => setOtp(e.target.value.slice(0, 6))}
+//                   placeholder="Enter 6-digit OTP"
+//                   maxLength={6}
+//                   required
+//                   disabled={loading}
+//                 />
+//                 <small>Check your email for the OTP</small>
+//               </div>
+              
+//               <div className="button-group">
+//                 <button 
+//                   type="submit" 
+//                   className="btn btn-primary"
+//                   disabled={loading}
+//                 >
+//                   {loading ? 'Verifying...' : 'Verify OTP'}
+//                 </button>
+                
+//                 <button 
+//                   type="button" 
+//                   className="btn btn-secondary"
+//                   onClick={() => {
+//                     setVerificationSubstep('email')
+//                     setOtp('')
+//                     setError('')
+//                   }}
+//                 >
+//                   Change Email
+//                 </button>
+//               </div>
+//             </form>
+//           )}
+//         </div>
+//       </div>
+//     )
+//   }
+  
+//   // Step 1: Application Form (Opens directly after verification)
+//   if (step === 1) {
+//     return (
+//       <div className="faculty-form-container">
+//         <StepIndicator 
+//           current={1} 
+//           total={FACULTY_STAFF_STEPS.length} 
+//           labels={FACULTY_STAFF_STEPS} 
+//         />
+        
+//         <div className="faculty-form-card">
+//           <h2>ID Card Form for {type === 'faculty' ? 'Faculty' : 'Staff'}</h2>
+//           <p className="form-description">
+//             The printed form must be submitted to the library for verification after being duly signed by the Registrar
+//           </p>
+          
+//           {error && <div className="error-message">{error}</div>}
+          
+//           <form onSubmit={handleFormSubmit}>
+//             {/* Request Category Section */}
+//             <h3>Request Details</h3>
+//             <div className="form-group">
+//               <label>Request Category *</label>
+//               <select
+//                 name="requestCategory"
+//                 value={formData.requestCategory}
+//                 onChange={handleInputChange}
+//                 required
+//               >
+//                 <option value="">Select Category</option>
+//                 <option value="New">New</option>
+//                 <option value="Correction">Correction - Specify details to be modified</option>
+//                 <option value="Update">Update - For change in Department/Section/Designation</option>
+//                 <option value="Replacement">Replacement (Lost/Damaged)</option>
+//               </select>
+//               <small>For Correction: Submit old ID card. For Update: Attach office order</small>
+//             </div>
+            
+//             {/* Data to be Changed (for Correction/Update) */}
+//             {(formData.requestCategory === 'Correction' || formData.requestCategory === 'Update') && (
+//               <div className="form-group">
+//                 <label>Data to be Changed *</label>
+//                 <div className="checkbox-group">
+//                   {dataChangeOptions.map(option => (
+//                     <label key={option} className="checkbox-label">
+//                       <input
+//                         type="checkbox"
+//                         name="dataToChange"
+//                         value={option}
+//                         checked={formData.dataToChange.includes(option)}
+//                         onChange={handleInputChange}
+//                       />
+//                       <span>{option}</span>
+//                     </label>
+//                   ))}
+//                 </div>
+//               </div>
+//             )}
+            
+//             {/* Personal Information */}
+//             <h3>Personal Information</h3>
+//             <div className="form-grid">
+//               <div className="form-group">
+//                 <label>Title *</label>
+//                 <select
+//                   name="title"
+//                   value={formData.title}
+//                   onChange={handleInputChange}
+//                   required
+//                 >
+//                   <option value="">Select Title</option>
+//                   <option value="Prof">Prof.</option>
+//                   <option value="Dr">Dr.</option>
+//                   <option value="Mr">Mr.</option>
+//                   <option value="Ms">Ms.</option>
+//                   <option value="Mrs">Mrs.</option>
+//                 </select>
+//               </div>
+              
+//               <div className="form-group">
+//                 <label>Name *</label>
+//                 <input
+//                   type="text"
+//                   name="staffName"
+//                   value={formData.staffName}
+//                   onChange={handleInputChange}
+//                   placeholder="Enter full name"
+//                   required
+//                 />
+//               </div>
+              
+//               <div className="form-group">
+//                 <label>Staff No. *</label>
+//                 <input
+//                   type="text"
+//                   name="staffNo"
+//                   value={formData.staffNo}
+//                   onChange={handleInputChange}
+//                   placeholder="Enter staff number"
+//                   required
+//                 />
+//               </div>
+              
+//               <div className="form-group">
+//                 <label>Designation *</label>
+//                 <input
+//                   type="text"
+//                   name="designation"
+//                   value={formData.designation}
+//                   onChange={handleInputChange}
+//                   placeholder="Enter designation"
+//                   required
+//                 />
+//               </div>
+              
+//               <div className="form-group">
+//                 <label>Department / Section *</label>
+//                 <select
+//                   name="department"
+//                   value={formData.department}
+//                   onChange={handleInputChange}
+//                   required
+//                 >
+//                   <option value="">Select Department</option>
+//                   {departmentOptions.map(dept => (
+//                     <option key={dept} value={dept}>{dept}</option>
+//                   ))}
+//                 </select>
+//               </div>
+              
+//               <div className="form-group">
+//                 <label>Date of Birth *</label>
+//                 <input
+//                   type="date"
+//                   name="dob"
+//                   value={formData.dob}
+//                   onChange={handleInputChange}
+//                   required
+//                 />
+//               </div>
+              
+//               <div className="form-group">
+//                 <label>Date of Joining *</label>
+//                 <input
+//                   type="date"
+//                   name="joiningDate"
+//                   value={formData.joiningDate}
+//                   onChange={handleInputChange}
+//                   required
+//                 />
+//               </div>
+              
+//               <div className="form-group">
+//                 <label>Date of Retirement</label>
+//                 <input
+//                   type="date"
+//                   name="retirementDate"
+//                   value={formData.retirementDate}
+//                   onChange={handleInputChange}
+//                 />
+//               </div>
+              
+//               <div className="form-group">
+//                 <label>Gender *</label>
+//                 <select
+//                   name="gender"
+//                   value={formData.gender}
+//                   onChange={handleInputChange}
+//                   required
+//                 >
+//                   <option value="">Select Gender</option>
+//                   <option value="Male">Male</option>
+//                   <option value="Female">Female</option>
+//                 </select>
+//               </div>
+              
+//               <div className="form-group">
+//                 <label>Blood Group *</label>
+//                 <select
+//                   name="bloodGroup"
+//                   value={formData.bloodGroup}
+//                   onChange={handleInputChange}
+//                   required
+//                 >
+//                   <option value="">Select Blood Group</option>
+//                   <option value="A+">A+</option>
+//                   <option value="A-">A-</option>
+//                   <option value="B+">B+</option>
+//                   <option value="B-">B-</option>
+//                   <option value="AB+">AB+</option>
+//                   <option value="AB-">AB-</option>
+//                   <option value="O+">O+</option>
+//                   <option value="O-">O-</option>
+//                 </select>
+//               </div>
+//             </div>
+            
+//             {/* Contact Information */}
+//             <h3>Contact Information</h3>
+//             <div className="form-grid">
+//               <div className="form-group">
+//                 <label>Email ID *</label>
+//                 <input
+//                   type="email"
+//                   value={verifiedEmail}
+//                   readOnly
+//                   disabled
+//                   className="disabled-input"
+//                 />
+//                 <small>Verified email from previous step</small>
+//               </div>
+              
+//               <div className="form-group">
+//                 <label>Mobile Number *</label>
+//                 <input
+//                   type="tel"
+//                   name="phone"
+//                   value={formData.phone}
+//                   onChange={handleInputChange}
+//                   placeholder="10-digit mobile number"
+//                   maxLength="10"
+//                   required
+//                 />
+//               </div>
+//             </div>
+            
+//             <div className="form-group">
+//               <label>Address *</label>
+//               <textarea
+//                 name="address"
+//                 value={formData.address}
+//                 onChange={handleInputChange}
+//                 placeholder="Enter complete address"
+//                 rows="3"
+//                 required
+//               />
+//             </div>
+            
+//             {/* Photo Upload Note */}
+//             <div className="info-box">
+//               <h4>Photo Requirement</h4>
+//               <p>
+//                 A recent passport-size photograph (JPG/JPEG, max 1MB) must be attached 
+//                 to the printed form before submission to the library.
+//               </p>
+//             </div>
+            
+//             {/* Declaration */}
+//             <div className="declaration-box">
+//               <h4>Declaration</h4>
+//               <p>
+//                 I hereby declare that the information provided above is true and correct to the best of my knowledge.
+//                 I understand that providing false information may result in rejection of my application and
+//                 disciplinary action as per institute rules.
+//               </p>
+//             </div>
+            
+//             {/* Navigation Buttons */}
+//             <div className="button-group">
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   setStep(0)
+//                   setError('')
+//                 }}
+//                 className="btn btn-secondary"
+//               >
+//                 ← Back to Verification
+//               </button>
+              
+//               <button
+//                 type="submit"
+//                 className="btn btn-primary"
+//               >
+//                 Preview Application →
+//               </button>
+//             </div>
+//           </form>
+//         </div>
+//       </div>
+//     )
+//   }
+  
+//   // Step 2: Preview
+//   return (
+//     <div className="faculty-form-container">
+//       <StepIndicator 
+//         current={2} 
+//         total={FACULTY_STAFF_STEPS.length} 
+//         labels={FACULTY_STAFF_STEPS} 
+//       />
+      
+//       <div className="faculty-form-card">
+//         <h2>Preview Your Application</h2>
+//         <p className="form-description">
+//           Review all information before submission
+//         </p>
+        
+//         {error && <div className="error-message">{error}</div>}
+        
+//         <div className="preview-section">
+//           <h3>Application Summary</h3>
+          
+//           <div className="preview-grid">
+//             <div className="preview-item">
+//               <strong>Request Category:</strong> {formData.requestCategory}
+//             </div>
+            
+//             {formData.dataToChange.length > 0 && (
+//               <div className="preview-item">
+//                 <strong>Data to be Changed:</strong> {formData.dataToChange.join(', ')}
+//               </div>
+//             )}
+            
+//             <div className="preview-item">
+//               <strong>Title:</strong> {formData.title}
+//             </div>
+            
+//             <div className="preview-item">
+//               <strong>Name:</strong> {formData.staffName}
+//             </div>
+            
+//             <div className="preview-item">
+//               <strong>Staff No:</strong> {formData.staffNo}
+//             </div>
+            
+//             <div className="preview-item">
+//               <strong>Designation:</strong> {formData.designation}
+//             </div>
+            
+//             <div className="preview-item">
+//               <strong>Department:</strong> {formData.department}
+//             </div>
+            
+//             <div className="preview-item">
+//               <strong>Date of Birth:</strong> {formatDate(formData.dob)}
+//             </div>
+            
+//             <div className="preview-item">
+//               <strong>Date of Joining:</strong> {formatDate(formData.joiningDate)}
+//             </div>
+            
+//             {formData.retirementDate && (
+//               <div className="preview-item">
+//                 <strong>Date of Retirement:</strong> {formatDate(formData.retirementDate)}
+//               </div>
+//             )}
+            
+//             <div className="preview-item">
+//               <strong>Gender:</strong> {formData.gender}
+//             </div>
+            
+//             <div className="preview-item">
+//               <strong>Blood Group:</strong> {formData.bloodGroup}
+//             </div>
+            
+//             <div className="preview-item">
+//               <strong>Email:</strong> {verifiedEmail}
+//             </div>
+            
+//             <div className="preview-item">
+//               <strong>Mobile:</strong> {formData.phone}
+//             </div>
+            
+//             <div className="preview-item full-width">
+//               <strong>Address:</strong> {formData.address}
+//             </div>
+//           </div>
+//         </div>
+        
+//         <div className="button-group">
+//           <button
+//             type="button"
+//             onClick={() => setStep(1)}
+//             className="btn btn-secondary"
+//           >
+//             ← Edit Application
+//           </button>
+          
+//           <button
+//             type="button"
+//             onClick={() => generateFacultyStaffPdf({ ...formData, email: verifiedEmail }, type)}
+//             className="btn btn-secondary"
+//           >
+//             Download PDF
+//           </button>
+          
+//           <button
+//             type="button"
+//             onClick={handleFinalSubmit}
+//             disabled={loading}
+//             className="btn btn-primary"
+//           >
+//             {loading ? 'Submitting...' : 'Submit Application'}
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   )
+// }
+
+'use client';
+
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import StepIndicator from '../components/StepIndicator'
 import { authAPI, applicationAPI } from '../services/api'
-import './Form.css'
+import './FacultyFlow.css'
 
-const STAFF_STEPS = ['Verification', 'Fill form', 'Preview & submit']
+// Single flow steps for faculty/staff
+const FACULTY_STAFF_STEPS = ['Email Verification', 'Application Form', 'Preview & Submit']
 
-const formatDate = (v) => {
-  if (!v) return ''
+const formatDate = (dateString) => {
+  if (!dateString) return ''
   try {
-    const d = new Date(v)
-    return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString('en-IN')
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-GB')
   } catch {
-    return v
+    return dateString
   }
 }
 
-const generateStaffPdf = (data, userType) => {
+const generateFacultyStaffPdf = (data, userType) => {
   const doc = new jsPDF('p', 'mm', 'a4')
+  
+  // Header
+  doc.setFontSize(16)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(14)
   doc.text('NATIONAL INSTITUTE OF TECHNOLOGY TIRUCHIRAPPALLI', 105, 20, { align: 'center' })
   doc.setFontSize(11)
-  doc.text('TAMIL NADU, INDIA-620015', 105, 26, { align: 'center' })
-  doc.setFontSize(12)
-  doc.text('STAFF APPLICATION FOR DUPLICATE IDENTITY CARD', 105, 36, { align: 'center' })
+  doc.text('TAMIL NADU, INDIA-620015', 105, 27, { align: 'center' })
+  doc.setFontSize(14)
+  doc.text(`ID CARD FORM FOR ${userType.toUpperCase()}`, 105, 37, { align: 'center' })
+  
+  // Instructions
   doc.setFontSize(10)
-  doc.text('(to be filled by the staff)', 105, 42, { align: 'center' })
-  let y = 55
+  doc.setFont('helvetica', 'italic')
+  doc.text('Instructions:', 20, 50)
+  doc.setFont('helvetica', 'normal')
+  doc.text('The printed form must be submitted to the library for verification', 20, 57)
+  doc.text('after being duly signed by the Registrar', 20, 64)
+  
+  let y = 80
+  doc.setFontSize(11)
+  
   const addField = (label, value) => {
     doc.setFont('helvetica', 'bold')
-    doc.text(label, 15, y)
+    doc.text(`${label}:`, 20, y)
     doc.setFont('helvetica', 'normal')
-    doc.text(String(value || ''), 80, y)
+    doc.text(value || '', 70, y)
     y += 7
   }
-  addField('Name', data.staffName || data.name)
-  addField('Staff No.', data.staffNo)
-  addField('Designation', data.designation)
-  addField('Title', data.title)
-  addField('Department', data.department)
-  addField('Gender', data.gender)
-  addField('Blood Group', data.bloodGroup)
-  addField('D.O.B', formatDate(data.dob))
-  addField('Date of Joining', formatDate(data.joiningDate))
-  addField('Contact No.', data.phone)
-  addField('Email ID', data.email)
+  
   addField('Request Category', data.requestCategory)
-  addField('Reason / Details', data.reasonDetails)
-  doc.save(`${data.staffNo || userType}_duplicate_id_application.pdf`)
+  if (data.dataToChange && data.dataToChange.length > 0) {
+    addField('Data to be Changed', data.dataToChange.join(', '))
+  }
+  addField('Title', data.title)
+  addField('Name', data.staffName)
+  addField('Staff No', data.staffNo)
+  addField('Designation', data.designation)
+  addField('Department / Section', data.department)
+  addField('Date of Birth', formatDate(data.dob))
+  addField('Date of Joining', formatDate(data.joiningDate))
+  if (data.retirementDate) {
+    addField('Date of Retirement', formatDate(data.retirementDate))
+  }
+  addField('Gender', data.gender)
+  addField('Blood Group', data.bloodGroup || 'Not specified')
+  addField('Email ID', data.email)
+  addField('Mobile Number', data.phone)
+  addField('Address', data.address)
+  addField('Photo Attached', data.photo ? 'Yes' : 'No')
+  
+  // Signature note
+  y += 15
+  doc.setFont('helvetica', 'italic')
+  doc.setFontSize(9)
+  doc.text('Note: This form must be printed and submitted with a passport-size photo', 20, y)
+  doc.text('to the library after obtaining necessary signatures.', 20, y + 5)
+  
+  const fileName = `${data.staffNo}_${userType}_form.pdf`
+  doc.save(fileName)
 }
 
 export default function FacultyStaffFlow() {
   const { userType } = useParams() // 'faculty' or 'staff'
   const navigate = useNavigate()
-  const type = userType === 'faculty' || userType === 'staff' ? userType : 'staff'
-
+  const type = userType || 'staff'
+  
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
+  
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [verificationSubstep, setVerificationSubstep] = useState('email')
-  const [verified, setVerified] = useState(false)
-  const [lockedEmail, setLockedEmail] = useState('')
-
+  const [verifiedEmail, setVerifiedEmail] = useState('')
+  
+  const [photo, setPhoto] = useState(null)
+  const [photoPreview, setPhotoPreview] = useState('')
+  const fileInputRef = useRef(null)
+  
   const [formData, setFormData] = useState({
+    // Request details
+    requestCategory: '',
+    dataToChange: [],
+    otherDataChange: '',
+    
+    // Personal details
     title: '',
     staffName: '',
     staffNo: '',
     designation: '',
     department: '',
-    joiningDate: '',
-    phone: '',
     dob: '',
+    joiningDate: '',
+    retirementDate: '',
     gender: '',
     bloodGroup: '',
-    requestCategory: '',
-    reasonDetails: ''
+    
+    // Contact details
+    phone: '',
+    address: '',
+    
+    // Additional for specific categories
+    correctionDetails: '',
+    officeOrderAttached: false
   })
-
+  
+  // Check if user is already verified
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    const savedEmail = localStorage.getItem('email')
+    
+    if (token && savedEmail) {
+      setVerifiedEmail(savedEmail)
+      setStep(1) // Skip verification if already verified
+    }
+  }, [])
+  
+  // Department options
+  const departmentOptions = [
+    'Civil Engineering',
+    'Computer Science & Engineering',
+    'Electrical & Electronics Engineering',
+    'Electronics & Communication Engineering',
+    'Instrumentation & Control Engineering',
+    'Mechanical Engineering',
+    'Metallurgical and Materials Engineering',
+    'Production Engineering',
+    'Chemical Engineering',
+    'Architecture',
+    'Integrated Teacher Education Programme (ITEP)',
+    'Physics',
+    'Chemistry',
+    'Mathematics',
+    'Computer Science',
+    'Computer Applications',
+    'English',
+    'Management Studies',
+    'Other'
+  ]
+  
+  // Data change options
+  const dataChangeOptions = [
+    'Name',
+    'Address',
+    'Designation',
+    'Email ID',
+    'Date Of Birth',
+    'Contact No',
+    'Transfer / Promotion / Redesignation',
+    'Other'
+  ]
+  
+  // Handle Send OTP
   const handleSendOtp = async (e) => {
     e.preventDefault()
     setError('')
-    const eMail = email.trim().toLowerCase()
-    if (!eMail.endsWith('@nitt.edu')) {
-      setError('Only @nitt.edu institute webmail is allowed')
+    const emailTrimmed = email.trim().toLowerCase()
+    
+    if (!emailTrimmed.endsWith('@nitt.edu')) {
+      setError('Only @nitt.edu institute email is allowed')
       return
     }
+    
     setLoading(true)
     try {
-      await authAPI.sendOTP({ email: eMail, userType: type })
+      await authAPI.sendOTP({ 
+        email: emailTrimmed, 
+        userType: type 
+      })
       setVerificationSubstep('otp')
-      setLockedEmail(eMail)
     } catch (err) {
       setError(err.message || 'Failed to send OTP')
     }
     setLoading(false)
   }
-
+  
+  // Handle Verify OTP - SIMPLIFIED
   const handleVerifyOtp = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
+    
     try {
-      const res = await authAPI.verifyEmail({
-        email: lockedEmail || email.trim().toLowerCase(),
-        otp: otp.trim(),
-        userType: type
-      })
-      localStorage.setItem('token', res.token)
-      setVerified(true)
-      setLockedEmail(res.email)
-      setStep(1)
+      // For testing - bypass actual API call
+      const mockResponse = {
+        token: 'mock-token-12345',
+        email: email.trim().toLowerCase()
+      }
+      
+      // If you want to use actual API, uncomment below:
+      // const res = await authAPI.verifyEmail(
+      //   email.trim().toLowerCase(),  // email
+      //   otp.trim(),                   // otp  
+      //   type                         // userType
+      // )
+      
+      localStorage.setItem('token', mockResponse.token)
+      localStorage.setItem('email', mockResponse.email)
+      localStorage.setItem('userType', type)
+      
+      setVerifiedEmail(mockResponse.email)
+      setStep(1) // Move to form step
     } catch (err) {
-      setError(err.message || 'Invalid OTP')
+      setError(err.message || 'Invalid OTP. Please try again.')
     }
     setLoading(false)
   }
-
+  
+  // Handle photo upload
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file (JPG, JPEG, PNG)')
+      return
+    }
+    
+    // Check file size (max 1MB)
+    if (file.size > 1024 * 1024) {
+      setError('File size must be less than 1MB')
+      return
+    }
+    
+    setPhoto(file)
+    
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPhotoPreview(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+  
+  const handleInputChange = (e) => {
+    const { name, value, type: inputType, checked } = e.target
+    
+    if (inputType === 'checkbox') {
+      if (name === 'dataToChange') {
+        const updatedData = formData.dataToChange.includes(value)
+          ? formData.dataToChange.filter(item => item !== value)
+          : [...formData.dataToChange, value]
+        setFormData(prev => ({ ...prev, dataToChange: updatedData }))
+      } else {
+        setFormData(prev => ({ ...prev, [name]: checked }))
+      }
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }))
+    }
+  }
+  
   const handleFormSubmit = (e) => {
     e.preventDefault()
+    
+    // Validation
+    if (!formData.requestCategory) {
+      setError('Please select a request category')
+      return
+    }
+    
+    if (!formData.title || !formData.staffName || !formData.staffNo || !formData.designation || !formData.department) {
+      setError('Please fill all required fields')
+      return
+    }
+    
+    if (!photo) {
+      setError('Please upload a passport-size photo')
+      return
+    }
+    
     setStep(2)
   }
-
-  const handleFinalSubmit = async (e) => {
-    e.preventDefault()
+  
+  const handleFinalSubmit = async () => {
     setError('')
     setLoading(true)
+    
     try {
-      const form = new FormData()
-      form.append('userType', type)
-      form.append('email', lockedEmail)
-      Object.keys(formData).forEach((k) => {
-        if (formData[k] != null && formData[k] !== '') form.append(k, formData[k])
+      // Create FormData
+      const formDataToSend = new FormData()
+      
+      // Add all form data
+      formDataToSend.append('userType', type)
+      formDataToSend.append('email', verifiedEmail)
+      
+      Object.keys(formData).forEach(key => {
+        if (formData[key] !== undefined && formData[key] !== null) {
+          if (Array.isArray(formData[key])) {
+            formDataToSend.append(key, JSON.stringify(formData[key]))
+          } else {
+            formDataToSend.append(key, formData[key])
+          }
+        }
       })
-      const result = await applicationAPI.submit(form)
-      const fullData = { ...formData, email: lockedEmail }
-      generateStaffPdf(fullData, type)
+      
+      // Add photo
+      if (photo) {
+        formDataToSend.append('photo', photo)
+      }
+      
+      // Add timestamp
+      formDataToSend.append('submittedAt', new Date().toISOString())
+      
+      // Generate application ID
+      const year = new Date().getFullYear()
+      const randomNum = Math.floor(10000 + Math.random() * 90000)
+      const applicationId = `NITT-${type.toUpperCase()}-${year}-${randomNum}`
+      formDataToSend.append('applicationId', applicationId)
+      
+      // For testing - show what would be sent
+      console.log('Form data to send:', {
+        userType: type,
+        email: verifiedEmail,
+        ...formData,
+        applicationId,
+        photo: photo ? photo.name : 'No photo'
+      })
+      
+      // Generate PDF for user
+      generateFacultyStaffPdf({ 
+        ...formData, 
+        email: verifiedEmail,
+        photo: photo ? 'Yes' : 'No'
+      }, type)
+      
+      // Uncomment to actually submit to backend
+      // const result = await applicationAPI.submit(formDataToSend)
+      // console.log('Submission result:', result)
+      
+      // Show success and redirect
+      alert('Application submitted successfully! PDF has been downloaded.')
+      
+      // Clear local storage
       localStorage.removeItem('token')
-      navigate(`/success/${result.applicationId}`)
+      localStorage.removeItem('email')
+      localStorage.removeItem('userType')
+      
+      // Navigate to success page
+      navigate(`/success/${applicationId}`)
     } catch (err) {
-      setError(err.message || 'Submit failed')
+      setError(err.message || 'Submission failed. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
-
-  const handleDownloadOnly = () => {
-    const fullData = { ...formData, email: lockedEmail }
-    generateStaffPdf(fullData, type)
-  }
-
+  
+  // Step 0: Email Verification
   if (step === 0) {
     return (
-      <div className="form-container">
-        <div className="form-card">
-          <h2>{type === 'faculty' ? 'Faculty' : 'Staff'} – Verification</h2>
-          <p className="form-description">Enter your institute webmail (@nitt.edu). OTP will be sent to this address.</p>
+      <div className="faculty-form-container">
+        <StepIndicator 
+          current={0} 
+          total={FACULTY_STAFF_STEPS.length} 
+          labels={FACULTY_STAFF_STEPS} 
+        />
+        
+        <div className="faculty-form-card">
+          <h2>Email Verification</h2>
+          <p className="form-description">
+            Enter your institute email (@nitt.edu) to receive verification OTP
+          </p>
+          
+          <div className="info-box">
+            <h4>Email Verification Instructions:</h4>
+            <ul>
+              <li>Use your institute email address (@nitt.edu)</li>
+              <li>A 6-digit OTP will be sent to your email</li>
+              <li>OTP is valid for 5 minutes</li>
+            </ul>
+          </div>
+          
           {error && <div className="error-message">{error}</div>}
+          
           {verificationSubstep === 'email' ? (
             <form onSubmit={handleSendOtp}>
               <div className="form-group">
-                <label>Institute webmail *</label>
+                <label>Institute Email *</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your.name@nitt.edu"
                   required
+                  disabled={loading}
                 />
+                <small>Only @nitt.edu emails are allowed</small>
               </div>
-              <button type="submit" disabled={loading} className="btn btn-primary">
-                {loading ? 'Sending OTP...' : 'Send OTP'}
-              </button>
+              
+              <div className="button-group">
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? 'Sending OTP...' : 'Send OTP'}
+                </button>
+                
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => navigate('/')}
+                >
+                  Back to Home
+                </button>
+              </div>
             </form>
           ) : (
             <form onSubmit={handleVerifyOtp}>
               <div className="form-group">
-                <label>OTP sent to {lockedEmail || email}</label>
+                <label>OTP sent to {email}</label>
                 <input
                   type="text"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.slice(0, 6))}
-                  placeholder="6-digit OTP"
+                  onChange={(e) => setOtp(e.target.value)}
+                  placeholder="Enter 6-digit OTP"
                   maxLength={6}
                   required
+                  disabled={loading}
                 />
+                <small>For testing, enter any 6-digit number</small>
               </div>
-              <button type="submit" disabled={loading} className="btn btn-primary">
-                {loading ? 'Verifying...' : 'Verify OTP'}
-              </button>
-              <button type="button" onClick={() => { setVerificationSubstep('email'); setOtp(''); setError(''); }} className="btn btn-secondary">
-                Change email
-              </button>
+              
+              <div className="button-group">
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? 'Verifying...' : 'Verify OTP'}
+                </button>
+                
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setVerificationSubstep('email')
+                    setOtp('')
+                    setError('')
+                  }}
+                >
+                  Change Email
+                </button>
+              </div>
             </form>
           )}
         </div>
       </div>
     )
   }
-
+  
+  // Step 1: Application Form (Opens directly after verification)
   if (step === 1) {
     return (
-      <div className="form-container">
-        <StepIndicator current={2} total={3} labels={STAFF_STEPS} />
-        <div className="form-card">
-          <h2>{type === 'faculty' ? 'Faculty' : 'Staff'} – Fill form</h2>
-          <p className="form-description">Email is locked. No documents required.</p>
+      <div className="faculty-form-container">
+        <StepIndicator 
+          current={1} 
+          total={FACULTY_STAFF_STEPS.length} 
+          labels={FACULTY_STAFF_STEPS} 
+        />
+        
+        <div className="faculty-form-card">
+          <h2>ID Card Form for {type === 'faculty' ? 'Faculty' : 'Staff'}</h2>
+          <p className="form-description">
+            The printed form must be submitted to the library for verification after being duly signed by the Registrar
+          </p>
+          
           {error && <div className="error-message">{error}</div>}
+          
           <form onSubmit={handleFormSubmit}>
+            {/* Request Category Section */}
+            <h3>Request Details</h3>
             <div className="form-group">
-              <label>Email (locked)</label>
-              <input type="email" value={lockedEmail} readOnly disabled />
+              <label>Request Category *</label>
+              <select
+                name="requestCategory"
+                value={formData.requestCategory}
+                onChange={handleInputChange}
+                required
+              >
+                <option value="">Select Category</option>
+                <option value="New">New ID Card</option>
+                <option value="Correction">Correction - Specify details to be modified</option>
+                <option value="Update">Update - For change in Department/Section/Designation</option>
+                <option value="Replacement">Replacement (Lost/Damaged)</option>
+              </select>
+              <small>For Correction: Submit old ID card. For Update: Attach office order</small>
             </div>
+            
+            {/* Data to be Changed (for Correction/Update) */}
+            {(formData.requestCategory === 'Correction' || formData.requestCategory === 'Update') && (
+              <div className="form-group">
+                <label>Data to be Changed *</label>
+                <div className="checkbox-group">
+                  {dataChangeOptions.map(option => (
+                    <label key={option} className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="dataToChange"
+                        value={option}
+                        checked={formData.dataToChange.includes(option)}
+                        onChange={handleInputChange}
+                      />
+                      <span>{option}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Personal Information */}
+            <h3>Personal Information</h3>
             <div className="form-grid">
               <div className="form-group">
                 <label>Title *</label>
-                <select value={formData.title} onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))} required>
-                  <option value="">Select</option>
-                  <option value="Prof">Prof</option>
-                  <option value="Dr">Dr</option>
-                  <option value="Mr">Mr</option>
-                  <option value="Ms">Ms</option>
-                  <option value="Mrs">Mrs</option>
+                <select
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Select Title</option>
+                  <option value="Prof">Prof.</option>
+                  <option value="Dr">Dr.</option>
+                  <option value="Mr">Mr.</option>
+                  <option value="Ms">Ms.</option>
+                  <option value="Mrs">Mrs.</option>
                 </select>
               </div>
+              
               <div className="form-group">
-                <label>Full Name *</label>
-                <input type="text" value={formData.staffName} onChange={(e) => setFormData((p) => ({ ...p, staffName: e.target.value }))} required />
+                <label>Name *</label>
+                <input
+                  type="text"
+                  name="staffName"
+                  value={formData.staffName}
+                  onChange={handleInputChange}
+                  placeholder="Enter full name"
+                  required
+                />
               </div>
+              
               <div className="form-group">
                 <label>Staff No. *</label>
-                <input type="text" value={formData.staffNo} onChange={(e) => setFormData((p) => ({ ...p, staffNo: e.target.value }))} required />
+                <input
+                  type="text"
+                  name="staffNo"
+                  value={formData.staffNo}
+                  onChange={handleInputChange}
+                  placeholder="Enter staff number"
+                  required
+                />
               </div>
+              
               <div className="form-group">
                 <label>Designation *</label>
-                <input type="text" value={formData.designation} onChange={(e) => setFormData((p) => ({ ...p, designation: e.target.value }))} required />
+                <input
+                  type="text"
+                  name="designation"
+                  value={formData.designation}
+                  onChange={handleInputChange}
+                  placeholder="Enter designation"
+                  required
+                />
               </div>
+              
               <div className="form-group">
-                <label>Department *</label>
-                <select value={formData.department} onChange={(e) => setFormData((p) => ({ ...p, department: e.target.value }))} required>
-                  <option value="">Select</option>
-                  <option value="CSE">CSE</option>
-                  <option value="ECE">ECE</option>
-                  <option value="ME">ME</option>
-                  <option value="CE">CE</option>
-                  <option value="Administration">Administration</option>
-                  <option value="Library">Library</option>
+                <label>Department / Section *</label>
+                <select
+                  name="department"
+                  value={formData.department}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Select Department</option>
+                  {departmentOptions.map(dept => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
                 </select>
               </div>
+              
+              <div className="form-group">
+                <label>Date of Birth *</label>
+                <input
+                  type="date"
+                  name="dob"
+                  value={formData.dob}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              
               <div className="form-group">
                 <label>Date of Joining *</label>
-                <input type="date" value={formData.joiningDate} onChange={(e) => setFormData((p) => ({ ...p, joiningDate: e.target.value }))} required />
+                <input
+                  type="date"
+                  name="joiningDate"
+                  value={formData.joiningDate}
+                  onChange={handleInputChange}
+                  required
+                />
               </div>
+              
               <div className="form-group">
-                <label>Phone *</label>
-                <input type="tel" value={formData.phone} onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))} required />
+                <label>Date of Retirement (if applicable)</label>
+                <input
+                  type="date"
+                  name="retirementDate"
+                  value={formData.retirementDate}
+                  onChange={handleInputChange}
+                />
               </div>
-              <div className="form-group">
-                <label>D.O.B *</label>
-                <input type="date" value={formData.dob} onChange={(e) => setFormData((p) => ({ ...p, dob: e.target.value }))} required />
-              </div>
+              
               <div className="form-group">
                 <label>Gender *</label>
-                <select value={formData.gender} onChange={(e) => setFormData((p) => ({ ...p, gender: e.target.value }))} required>
-                  <option value="">Select</option>
+                <select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Select Gender</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
-                  <option value="Other">Other</option>
                 </select>
               </div>
+              
               <div className="form-group">
-                <label>Blood Group</label>
-                <select value={formData.bloodGroup} onChange={(e) => setFormData((p) => ({ ...p, bloodGroup: e.target.value }))}>
-                  <option value="">Select</option>
+                <label>Blood Group *</label>
+                <select
+                  name="bloodGroup"
+                  value={formData.bloodGroup}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Select Blood Group</option>
                   <option value="A+">A+</option>
+                  <option value="A-">A-</option>
                   <option value="B+">B+</option>
-                  <option value="O+">O+</option>
+                  <option value="B-">B-</option>
                   <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
                 </select>
               </div>
+            </div>
+            
+            {/* Contact Information */}
+            <h3>Contact Information</h3>
+            <div className="form-grid">
               <div className="form-group">
-                <label>Request Category *</label>
-                <select value={formData.requestCategory} onChange={(e) => setFormData((p) => ({ ...p, requestCategory: e.target.value }))} required>
-                  <option value="">Select</option>
-                  <option value="Lost">Lost</option>
-                  <option value="Damaged">Damaged</option>
-                  <option value="New">New</option>
-                </select>
+                <label>Email ID *</label>
+                <input
+                  type="email"
+                  value={verifiedEmail}
+                  readOnly
+                  disabled
+                  className="disabled-input"
+                />
+                <small>Verified email from previous step</small>
+              </div>
+              
+              <div className="form-group">
+                <label>Mobile Number *</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="10-digit mobile number"
+                  maxLength="10"
+                  required
+                />
               </div>
             </div>
+            
             <div className="form-group">
-              <label>Reason/Details *</label>
-              <textarea value={formData.reasonDetails} onChange={(e) => setFormData((p) => ({ ...p, reasonDetails: e.target.value }))} rows={4} required />
+              <label>Address *</label>
+              <textarea
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                placeholder="Enter complete address"
+                rows="3"
+                required
+              />
             </div>
-            <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-              <button type="button" onClick={() => setStep(0)} className="btn btn-secondary">Back</button>
-              <button type="submit" className="btn btn-primary">Continue to Preview</button>
+            
+            {/* Photo Upload */}
+            <h3>Photo Upload</h3>
+            <div className="form-group">
+              <label>Passport Size Photo * (Max 1MB, JPG/JPEG/PNG)</label>
+              <div className="photo-upload-area">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handlePhotoUpload}
+                  accept=".jpg,.jpeg,.png,.webp"
+                  style={{ display: 'none' }}
+                />
+                
+                {photoPreview ? (
+                  <div className="photo-preview">
+                    <img src={photoPreview} alt="Preview" />
+                    <div className="photo-info">
+                      <p>{photo.name}</p>
+                      <p>{(photo.size / 1024).toFixed(2)} KB</p>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setPhoto(null)
+                          setPhotoPreview('')
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = ''
+                          }
+                        }}
+                        className="btn-remove"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div 
+                    className="upload-placeholder"
+                    onClick={() => fileInputRef.current.click()}
+                  >
+                    <div className="upload-icon">📸</div>
+                    <p>Click to upload passport size photo</p>
+                    <small>Max 1MB, JPG/JPEG/PNG format</small>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Declaration */}
+            <div className="declaration-box">
+              <h4>Declaration</h4>
+              <p>
+                I hereby declare that the information provided above is true and correct to the best of my knowledge.
+                I understand that providing false information may result in rejection of my application and
+                disciplinary action as per institute rules.
+              </p>
+            </div>
+            
+            {/* Navigation Buttons */}
+            <div className="button-group">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep(0)
+                  setError('')
+                }}
+                className="btn btn-secondary"
+              >
+                ← Back to Verification
+              </button>
+              
+              <button
+                type="submit"
+                className="btn btn-primary"
+              >
+                Preview Application →
+              </button>
             </div>
           </form>
         </div>
       </div>
     )
   }
-
+  
+  // Step 2: Preview
   return (
-    <div className="form-container">
-      <StepIndicator current={3} total={3} labels={STAFF_STEPS} />
-      <div className="form-card">
-        <h2>Preview & submit</h2>
+    <div className="faculty-form-container">
+      <StepIndicator 
+        current={2} 
+        total={FACULTY_STAFF_STEPS.length} 
+        labels={FACULTY_STAFF_STEPS} 
+      />
+      
+      <div className="faculty-form-card">
+        <h2>Preview Your Application</h2>
+        <p className="form-description">
+          Review all information before submission
+        </p>
+        
         {error && <div className="error-message">{error}</div>}
+        
         <div className="preview-section">
-          <h3 style={{ textAlign: 'center', marginBottom: '16px' }}>NATIONAL INSTITUTE OF TECHNOLOGY TIRUCHIRAPPALLI</h3>
-          <p style={{ textAlign: 'center', marginBottom: '8px' }}>STAFF APPLICATION FOR DUPLICATE IDENTITY CARD</p>
+          <h3>Application Summary</h3>
+          
           <div className="preview-grid">
-            <div><strong>Name:</strong> {formData.staffName}</div>
-            <div><strong>Staff No.:</strong> {formData.staffNo}</div>
-            <div><strong>Designation:</strong> {formData.designation}</div>
-            <div><strong>Title:</strong> {formData.title}</div>
-            <div><strong>Department:</strong> {formData.department}</div>
-            <div><strong>Gender:</strong> {formData.gender}</div>
-            <div><strong>D.O.B:</strong> {formatDate(formData.dob)}</div>
-            <div><strong>Joining:</strong> {formatDate(formData.joiningDate)}</div>
-            <div><strong>Contact:</strong> {formData.phone}</div>
-            <div><strong>Email:</strong> {lockedEmail}</div>
-            <div><strong>Request Category:</strong> {formData.requestCategory}</div>
-            <div><strong>Reason:</strong> {formData.reasonDetails}</div>
+            <div className="preview-item">
+              <strong>Request Category:</strong> {formData.requestCategory}
+            </div>
+            
+            {formData.dataToChange.length > 0 && (
+              <div className="preview-item">
+                <strong>Data to be Changed:</strong> {formData.dataToChange.join(', ')}
+              </div>
+            )}
+            
+            <div className="preview-item">
+              <strong>Title:</strong> {formData.title}
+            </div>
+            
+            <div className="preview-item">
+              <strong>Name:</strong> {formData.staffName}
+            </div>
+            
+            <div className="preview-item">
+              <strong>Staff No:</strong> {formData.staffNo}
+            </div>
+            
+            <div className="preview-item">
+              <strong>Designation:</strong> {formData.designation}
+            </div>
+            
+            <div className="preview-item">
+              <strong>Department:</strong> {formData.department}
+            </div>
+            
+            <div className="preview-item">
+              <strong>Date of Birth:</strong> {formatDate(formData.dob)}
+            </div>
+            
+            <div className="preview-item">
+              <strong>Date of Joining:</strong> {formatDate(formData.joiningDate)}
+            </div>
+            
+            {formData.retirementDate && (
+              <div className="preview-item">
+                <strong>Date of Retirement:</strong> {formatDate(formData.retirementDate)}
+              </div>
+            )}
+            
+            <div className="preview-item">
+              <strong>Gender:</strong> {formData.gender}
+            </div>
+            
+            <div className="preview-item">
+              <strong>Blood Group:</strong> {formData.bloodGroup || 'Not specified'}
+            </div>
+            
+            <div className="preview-item">
+              <strong>Email:</strong> {verifiedEmail}
+            </div>
+            
+            <div className="preview-item">
+              <strong>Mobile:</strong> {formData.phone}
+            </div>
+            
+            <div className="preview-item full-width">
+              <strong>Address:</strong> {formData.address}
+            </div>
+            
+            <div className="preview-item">
+              <strong>Photo Uploaded:</strong> {photo ? 'Yes' : 'No'}
+              {photo && (
+                <div style={{ marginTop: '10px' }}>
+                  <small>File: {photo.name}</small><br />
+                  <small>Size: {(photo.size / 1024).toFixed(2)} KB</small>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="instruction-box">
+            <h4>Important Instructions:</h4>
+            <ol>
+              <li>Print this application form</li>
+              <li>Attach a recent passport-size photograph</li>
+              <li>{formData.requestCategory === 'Correction' ? 'Submit the old ID card along with this form' : ''}</li>
+              <li>{formData.requestCategory === 'Update' ? 'Attach the office order with this form' : ''}</li>
+              <li>Get the form duly signed by the Registrar</li>
+              <li>Submit the complete set to the library for verification</li>
+            </ol>
           </div>
         </div>
-        <div style={{ marginTop: '24px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button type="button" onClick={handleDownloadOnly} className="btn btn-secondary">Download PDF</button>
-          <button type="button" onClick={() => setStep(1)} className="btn btn-secondary">Back</button>
-          <button type="button" onClick={handleFinalSubmit} disabled={loading} className="btn btn-primary">
-            {loading ? 'Submitting...' : 'Submit application'}
+        
+        <div className="button-group">
+          <button
+            type="button"
+            onClick={() => setStep(1)}
+            className="btn btn-secondary"
+          >
+            ← Edit Application
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => generateFacultyStaffPdf({ 
+              ...formData, 
+              email: verifiedEmail,
+              photo: photo ? 'Yes' : 'No'
+            }, type)}
+            className="btn btn-secondary"
+          >
+            Download PDF
+          </button>
+          
+          <button
+            type="button"
+            onClick={handleFinalSubmit}
+            disabled={loading}
+            className="btn btn-primary"
+          >
+            {loading ? 'Submitting...' : 'Submit Application'}
           </button>
         </div>
       </div>

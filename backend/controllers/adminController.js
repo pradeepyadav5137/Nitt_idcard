@@ -1,106 +1,58 @@
 import Application from '../models/Application.js';
 import Admin from '../models/Admin.js';
 
-// Add new admin (only existing admin can add)
-export const addAdmin = async (req, res) => {
+// ===== GET ALL APPLICATIONS =====
+export const getAllApplications = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
-    if (!username || !email || !password) {
-      return res.status(400).json({ message: 'Username, email and password are required' });
-    }
-    const e = email.trim().toLowerCase();
-    if (await Admin.findOne({ username })) {
-      return res.status(400).json({ message: 'Username already exists' });
-    }
-    if (await Admin.findOne({ email: e })) {
-      return res.status(400).json({ message: 'Email already registered' });
-    }
-    const admin = new Admin({ username, email: e, password, role: 'admin' });
-    await admin.save();
-    res.json({ success: true, message: 'Admin added successfully', admin: { username, email: e } });
-  } catch (error) {
-    console.error('Add admin error:', error);
-    res.status(500).json({ message: 'Error adding admin' });
-  }
-};
+    const { status, userType, search } = req.query;
 
-// Approve application
-export const approveApplication = async (req, res) => {
-  try {
-    const { adminNotes } = req.body;
+    // Build query
+    let query = { isDeleted: false };
 
-    const application = await Application.findOneAndUpdate(
-      { applicationId: req.params.applicationId },
-      {
-        status: 'approved',
-        adminNotes: adminNotes || '',
-        updatedAt: new Date()
-      },
-      { new: true }
-    );
-
-    if (!application) {
-      return res.status(404).json({ message: 'Application not found' });
+    if (status && status !== 'all') {
+      query.status = status;
     }
+
+    if (userType && userType !== 'all') {
+      query.userType = userType;
+    }
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { rollNo: { $regex: search, $options: 'i' } },
+        { applicationId: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const applications = await Application.find(query)
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.json({
       success: true,
-      message: 'Application approved',
-      application
+      applications,
+      count: applications.length
     });
   } catch (error) {
-    console.error('Approve error:', error);
-    res.status(500).json({ message: 'Error approving application' });
+    console.error('Get applications error:', error);
+    res.status(500).json({ message: 'Failed to fetch applications' });
   }
 };
 
-// Reject application
-export const rejectApplication = async (req, res) => {
-  try {
-    const { adminNotes } = req.body;
-
-    if (!adminNotes) {
-      return res.status(400).json({ message: 'Reason for rejection required' });
-    }
-
-    const application = await Application.findOneAndUpdate(
-      { applicationId: req.params.applicationId },
-      {
-        status: 'rejected',
-        adminNotes,
-        updatedAt: new Date()
-      },
-      { new: true }
-    );
-
-    if (!application) {
-      return res.status(404).json({ message: 'Application not found' });
-    }
-
-    res.json({
-      success: true,
-      message: 'Application rejected',
-      application
-    });
-  } catch (error) {
-    console.error('Reject error:', error);
-    res.status(500).json({ message: 'Error rejecting application' });
-  }
-};
-
-// Get dashboard stats
+// ===== GET DASHBOARD STATS =====
 export const getDashboardStats = async (req, res) => {
   try {
-    const total = await Application.countDocuments();
-    const pending = await Application.countDocuments({ status: 'pending' });
-    const approved = await Application.countDocuments({ status: 'approved' });
-    const rejected = await Application.countDocuments({ status: 'rejected' });
-
-    const byType = {
-      student: await Application.countDocuments({ userType: 'student' }),
-      faculty: await Application.countDocuments({ userType: 'faculty' }),
-      staff: await Application.countDocuments({ userType: 'staff' })
-    };
+    const total = await Application.countDocuments({ isDeleted: false });
+    const pending = await Application.countDocuments({ status: 'pending', isDeleted: false });
+    const approved = await Application.countDocuments({ status: 'approved', isDeleted: false });
+    const rejected = await Application.countDocuments({ status: 'rejected', isDeleted: false });
+    const student = await Application.countDocuments({ userType: 'student', isDeleted: false });
+    const faculty = await Application.countDocuments({ 
+      userType: { $in: ['faculty', 'staff'] }, 
+      isDeleted: false 
+    });
 
     res.json({
       success: true,
@@ -109,12 +61,199 @@ export const getDashboardStats = async (req, res) => {
         pending,
         approved,
         rejected,
-        byType
+        student,
+        faculty
       }
     });
   } catch (error) {
-    console.error('Stats error:', error);
-    res.status(500).json({ message: 'Error fetching stats' });
+    console.error('Get stats error:', error);
+    res.status(500).json({ message: 'Failed to fetch stats' });
   }
 };
 
+// ===== GET SINGLE APPLICATION =====
+export const getApplicationById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const application = await Application.findById(id);
+
+    if (!application) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+
+    res.json({
+      success: true,
+      application
+    });
+  } catch (error) {
+    console.error('Get application error:', error);
+    res.status(500).json({ message: 'Failed to fetch application' });
+  }
+};
+
+// ===== UPDATE APPLICATION STATUS =====
+export const updateApplicationStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, reason } = req.body;
+
+    if (!['pending', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    const updateData = { status };
+    if (status === 'rejected' && reason) {
+      updateData.rejectionReason = reason;
+    }
+
+    const application = await Application.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    );
+
+    if (!application) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+
+    res.json({
+      success: true,
+      message: `Application ${status} successfully`,
+      application
+    });
+  } catch (error) {
+    console.error('Update status error:', error);
+    res.status(500).json({ message: 'Failed to update status' });
+  }
+};
+
+// ===== SOFT DELETE APPLICATION =====
+export const softDeleteApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const application = await Application.findByIdAndUpdate(
+      id,
+      { 
+        isDeleted: true,
+        deletedAt: new Date()
+      },
+      { new: true }
+    );
+
+    if (!application) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Application deleted successfully'
+    });
+  } catch (error) {
+    console.error('Soft delete error:', error);
+    res.status(500).json({ message: 'Failed to delete application' });
+  }
+};
+
+// ===== HARD DELETE APPLICATION =====
+export const hardDeleteApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const application = await Application.findByIdAndDelete(id);
+
+    if (!application) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Application permanently deleted'
+    });
+  } catch (error) {
+    console.error('Hard delete error:', error);
+    res.status(500).json({ message: 'Failed to permanently delete application' });
+  }
+};
+
+// ===== CREATE NEW ADMIN =====
+export const createAdmin = async (req, res) => {
+  try {
+    const { username, email, password, role } = req.body;
+
+    // Check if admin already exists
+    const existingAdmin = await Admin.findOne({ $or: [{ username }, { email }] });
+    if (existingAdmin) {
+      return res.status(400).json({ message: 'Admin with this username or email already exists' });
+    }
+
+    // Create new admin
+    const admin = new Admin({
+      username,
+      email,
+      password, // Will be hashed by mongoose pre-save hook
+      role: role || 'admin'
+    });
+
+    await admin.save();
+
+    res.json({
+      success: true,
+      message: 'Admin created successfully',
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email,
+        role: admin.role
+      }
+    });
+  } catch (error) {
+    console.error('Create admin error:', error);
+    res.status(500).json({ message: 'Failed to create admin' });
+  }
+};
+
+// ===== GET ALL ADMINS =====
+export const getAllAdmins = async (req, res) => {
+  try {
+    const admins = await Admin.find()
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({
+      success: true,
+      admins,
+      count: admins.length
+    });
+  } catch (error) {
+    console.error('Get admins error:', error);
+    res.status(500).json({ message: 'Failed to fetch admins' });
+  }
+};
+
+// ===== DELETE ADMIN =====
+export const deleteAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent deleting yourself
+    if (req.admin.id === id) {
+      return res.status(400).json({ message: 'Cannot delete your own account' });
+    }
+
+    const admin = await Admin.findByIdAndDelete(id);
+
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Admin deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete admin error:', error);
+    res.status(500).json({ message: 'Failed to delete admin' });
+  }
+};
