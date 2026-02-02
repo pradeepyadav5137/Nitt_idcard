@@ -21,13 +21,9 @@ const applicationSchema = new mongoose.Schema({
   rollNo: String,
   name: String,
   fatherName: String,
-  motherName: String,
   programme: String,
   branch: String,
   batch: String,
-  semester: String,
-  hostel: String,
-  roomNo: String,
   
   // Faculty/Staff fields
   staffNo: String,
@@ -55,12 +51,9 @@ const applicationSchema = new mongoose.Schema({
   // Document request
   requestCategory: {
     type: String,
-    enum: ['Lost', 'Damaged', 'Correction', 'New', 'Stolen', 'Update']
+    enum: ['Lost', 'Damaged', 'Correction', 'New']
   },
   reasonDetails: String,
-  firNumber: String,
-  firDate: Date,
-  policeStation: String,
   
   // File URLs (local path or Firebase Storage URL)
   photoPath: String,
@@ -71,14 +64,10 @@ const applicationSchema = new mongoose.Schema({
   // Status
   status: {
     type: String,
-    enum: ['submitted', 'processed', 'approved', 'rejected'],
-    default: 'submitted'
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
   },
   adminNotes: String,
-  isDeleted: {
-    type: Boolean,
-    default: false
-  },
   
   createdAt: {
     type: Date,

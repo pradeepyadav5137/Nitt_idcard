@@ -7,7 +7,7 @@ export const getAllApplications = async (req, res) => {
     const { status, userType, search } = req.query;
 
     // Build query
-    let query = { isDeleted: { $ne: true } };
+    let query = { isDeleted: false };
 
     if (status && status !== 'all') {
       query.status = status;
@@ -44,28 +44,25 @@ export const getAllApplications = async (req, res) => {
 // ===== GET DASHBOARD STATS =====
 export const getDashboardStats = async (req, res) => {
   try {
-    const total = await Application.countDocuments({ isDeleted: { $ne: true } });
-    const submitted = await Application.countDocuments({ status: 'submitted', isDeleted: { $ne: true } });
-    const processed = await Application.countDocuments({ status: 'processed', isDeleted: { $ne: true } });
-    const approved = await Application.countDocuments({ status: 'approved', isDeleted: { $ne: true } });
-    const rejected = await Application.countDocuments({ status: 'rejected', isDeleted: { $ne: true } });
-    const student = await Application.countDocuments({ userType: 'student', isDeleted: { $ne: true } });
+    const total = await Application.countDocuments({ isDeleted: false });
+    const pending = await Application.countDocuments({ status: 'pending', isDeleted: false });
+    const approved = await Application.countDocuments({ status: 'approved', isDeleted: false });
+    const rejected = await Application.countDocuments({ status: 'rejected', isDeleted: false });
+    const student = await Application.countDocuments({ userType: 'student', isDeleted: false });
     const faculty = await Application.countDocuments({ 
       userType: { $in: ['faculty', 'staff'] }, 
-      isDeleted: { $ne: true }
+      isDeleted: false 
     });
 
     res.json({
       success: true,
       stats: {
         total,
-        submitted,
-        processed,
+        pending,
         approved,
         rejected,
         student,
-        faculty,
-        pending: submitted + processed // For backward compatibility with some UI components if needed
+        faculty
       }
     });
   } catch (error) {
@@ -74,25 +71,11 @@ export const getDashboardStats = async (req, res) => {
   }
 };
 
-// Helper to find application by ID or applicationId
-const findApp = async (id) => {
-  if (!id) return null;
-
-  // Try finding by MongoDB _id first if it looks like one
-  if (id.match(/^[0-9a-fA-F]{24}$/)) {
-    const app = await Application.findById(id);
-    if (app) return app;
-  }
-
-  // Otherwise try finding by applicationId
-  return await Application.findOne({ applicationId: id });
-};
-
 // ===== GET SINGLE APPLICATION =====
 export const getApplicationById = async (req, res) => {
   try {
     const { id } = req.params;
-    const application = await findApp(id);
+    const application = await Application.findById(id);
 
     if (!application) {
       return res.status(404).json({ message: 'Application not found' });
@@ -114,46 +97,29 @@ export const updateApplicationStatus = async (req, res) => {
     const { id } = req.params;
     const { status, reason } = req.body;
 
-    const validStatuses = ['submitted', 'processed', 'approved', 'rejected', 'pending'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({
-        message: 'Invalid status',
-        validStatuses
-      });
+    if (!['pending', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
     }
 
-    // Map 'pending' to 'submitted' for backward compatibility
-    const finalStatus = status === 'pending' ? 'submitted' : status;
-
-    const updateData = {
-      status: finalStatus,
-      updatedAt: new Date()
-    };
-
-    if (reason) {
-      updateData.adminNotes = reason; // Use adminNotes field from schema
-      if (status === 'rejected') {
-        updateData.rejectionReason = reason;
-      }
+    const updateData = { status };
+    if (status === 'rejected' && reason) {
+      updateData.rejectionReason = reason;
     }
 
-    // Find application first
-    const application = await findApp(id);
-    if (!application) {
-      return res.status(404).json({ message: 'Application not found' });
-    }
-
-    // Update the found application
-    const updatedApp = await Application.findByIdAndUpdate(
-      application._id,
+    const application = await Application.findByIdAndUpdate(
+      id,
       updateData,
       { new: true }
     );
 
+    if (!application) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+
     res.json({
       success: true,
-      message: `Application status updated to ${finalStatus}`,
-      application: updatedApp
+      message: `Application ${status} successfully`,
+      application
     });
   } catch (error) {
     console.error('Update status error:', error);
@@ -165,19 +131,19 @@ export const updateApplicationStatus = async (req, res) => {
 export const softDeleteApplication = async (req, res) => {
   try {
     const { id } = req.params;
-    const application = await findApp(id);
+
+    const application = await Application.findByIdAndUpdate(
+      id,
+      { 
+        isDeleted: true,
+        deletedAt: new Date()
+      },
+      { new: true }
+    );
 
     if (!application) {
       return res.status(404).json({ message: 'Application not found' });
     }
-
-    await Application.findByIdAndUpdate(
-      application._id,
-      { 
-        isDeleted: true,
-        deletedAt: new Date()
-      }
-    );
 
     res.json({
       success: true,
@@ -193,13 +159,12 @@ export const softDeleteApplication = async (req, res) => {
 export const hardDeleteApplication = async (req, res) => {
   try {
     const { id } = req.params;
-    const application = await findApp(id);
+
+    const application = await Application.findByIdAndDelete(id);
 
     if (!application) {
       return res.status(404).json({ message: 'Application not found' });
     }
-
-    await Application.findByIdAndDelete(application._id);
 
     res.json({
       success: true,

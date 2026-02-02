@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import StepIndicator from '../components/StepIndicator'
 import { authAPI, applicationAPI } from '../services/api'
-import { generateStudentPDF } from '../services/pdfGenerator'
 import './Form.css'
 import './StudentFlow.css'
 
@@ -19,8 +18,35 @@ const formatDate = (v) => {
   }
 }
 
-const generateStudentPdfLocal = (data) => {
-  const doc = generateStudentPDF(data);
+const generateStudentPdf = (data) => {
+  const doc = new jsPDF('p', 'mm', 'a4')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  doc.text('NATIONAL INSTITUTE OF TECHNOLOGY TIRUCHIRAPPALLI', 105, 20, { align: 'center' })
+  doc.setFontSize(11)
+  doc.text('TAMIL NADU, INDIA-620015', 105, 26, { align: 'center' })
+  doc.setFontSize(12)
+  doc.text('STUDENT APPLICATION FOR DUPLICATE IDENTITY CARD', 105, 36, { align: 'center' })
+  doc.setFontSize(10)
+  doc.text('(to be filled by the student)', 105, 42, { align: 'center' })
+  let y = 55
+  const addField = (label, value) => {
+    doc.setFont('helvetica', 'bold')
+    doc.text(label, 15, y)
+    doc.setFont('helvetica', 'normal')
+    doc.text(String(value || ''), 80, y)
+    y += 7
+  }
+  addField('Name of the Student', data.name)
+  addField('Roll No.', data.rollNo)
+  addField('Branch', data.branch)
+  addField("Parent's Name", data.fatherName)
+  addField('Blood Group', data.bloodGroup)
+  addField('D.O.B', formatDate(data.dob))
+  addField('Contact No.', data.phone)
+  addField('Email ID', data.email)
+  addField('Request Category', data.requestCategory)
+  addField('Reason / Details', data.reasonDetails)
   doc.save(`${data.rollNo || 'student'}_duplicate_id_application.pdf`)
 }
 
@@ -37,49 +63,18 @@ export default function StudentFlow() {
   const [verified, setVerified] = useState(false)
   const [email, setEmail] = useState('') // locked after verify: rollno@nitt.edu
 
-  // Check if already verified as student
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    const savedEmail = localStorage.getItem('email')
-    const savedUserType = localStorage.getItem('userType')
-
-    if (token && savedEmail && savedUserType === 'student') {
-      setEmail(savedEmail)
-      setVerified(true)
-      const roll = savedEmail.split('@')[0]
-      if (/^\d+$/.test(roll)) {
-        setRollNo(roll)
-      }
-      setStep(1)
-    } else if (token && savedUserType !== 'student') {
-      // Different user type, clear to force re-verification
-      localStorage.removeItem('token')
-      localStorage.removeItem('email')
-      localStorage.removeItem('userType')
-    }
-  }, [])
-
   // Form (step 1)
   const [formData, setFormData] = useState({
     name: '',
     fatherName: '',
-    motherName: '',
     programme: '',
     branch: '',
     batch: '',
-    semester: '',
-    hostel: '',
-    roomNo: '',
     dob: '',
     gender: '',
     bloodGroup: '',
     phone: '',
     parentMobile: '',
-    addressLine1: '',
-    addressLine2: '',
-    district: '',
-    state: '',
-    pinCode: '',
     requestCategory: '',
     reasonDetails: ''
   })
@@ -108,14 +103,12 @@ export default function StudentFlow() {
     setError('')
     setLoading(true)
     try {
-      const res = await authAPI.verifyEmail(
-        email || `${rollNo.trim().toLowerCase()}@nitt.edu`,
-        otp.trim(),
-        'student'
-      )
+      const res = await authAPI.verifyEmail({
+        email: email || `${rollNo.trim().toLowerCase()}@nitt.edu`,
+        otp: otp.trim(),
+        userType: 'student'
+      })
       localStorage.setItem('token', res.token)
-      localStorage.setItem('email', res.email)
-      localStorage.setItem('userType', 'student')
       setVerified(true)
       setEmail(res.email)
       setStep(1)
@@ -145,10 +138,7 @@ export default function StudentFlow() {
     setError('')
     setLoading(true)
     try {
-      const fullData = { ...formData, rollNo: rollNo.trim(), email }
-      const doc = generateStudentPDF(fullData)
-      const pdfBlob = doc.output('blob')
-
+      const token = localStorage.getItem('token')
       const form = new FormData()
       form.append('userType', 'student')
       form.append('email', email)
@@ -159,18 +149,10 @@ export default function StudentFlow() {
       if (photoFile) form.append('photo', photoFile)
       if (firFile) form.append('fir', firFile)
       if (paymentFile) form.append('payment', paymentFile)
-
-      // Upload the generated PDF as well
-      form.append('applicationPdf', pdfBlob, `${rollNo.trim()}_application.pdf`)
-
       const result = await applicationAPI.submit(form)
-
-      // Also download locally for the user
-      doc.save(`${rollNo.trim()}_duplicate_id_application.pdf`)
-
+      const fullData = { ...formData, rollNo: rollNo.trim(), email }
+      generateStudentPdf(fullData)
       localStorage.removeItem('token')
-      localStorage.removeItem('email')
-      localStorage.removeItem('userType')
       navigate(`/success/${result.applicationId}`)
     } catch (err) {
       setError(err.message || 'Submit failed')
@@ -180,7 +162,7 @@ export default function StudentFlow() {
 
   const handleDownloadOnly = () => {
     const fullData = { ...formData, rollNo: rollNo.trim(), email }
-    generateStudentPdfLocal(fullData)
+    generateStudentPdf(fullData)
   }
 
   if (step === 0) {
@@ -259,21 +241,13 @@ export default function StudentFlow() {
                 <input type="text" value={formData.fatherName} onChange={(e) => setFormData((p) => ({ ...p, fatherName: e.target.value }))} required />
               </div>
               <div className="form-group">
-                <label>Mother&apos;s Name *</label>
-                <input type="text" value={formData.motherName} onChange={(e) => setFormData((p) => ({ ...p, motherName: e.target.value }))} required />
-              </div>
-              <div className="form-group">
                 <label>Programme *</label>
                 <select value={formData.programme} onChange={(e) => setFormData((p) => ({ ...p, programme: e.target.value }))} required>
                   <option value="">Select</option>
                   <option value="B.Tech">B.Tech</option>
-                  <option value="B.Arch">B.Arch</option>
                   <option value="M.Tech">M.Tech</option>
-                  <option value="M.Sc">M.Sc</option>
-                  <option value="MCA">MCA</option>
-                  <option value="MBA">MBA</option>
-                  <option value="MA">MA</option>
                   <option value="Ph.D">Ph.D</option>
+                  <option value="MBA">MBA</option>
                 </select>
               </div>
               <div className="form-group">
@@ -288,22 +262,7 @@ export default function StudentFlow() {
               </div>
               <div className="form-group">
                 <label>Batch *</label>
-                <input type="text" value={formData.batch} onChange={(e) => setFormData((p) => ({ ...p, batch: e.target.value }))} placeholder="e.g. 2021-2025" required />
-              </div>
-              <div className="form-group">
-                <label>Semester *</label>
-                <select value={formData.semester} onChange={(e) => setFormData((p) => ({ ...p, semester: e.target.value }))} required>
-                  <option value="">Select</option>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Hostel Name</label>
-                <input type="text" value={formData.hostel} onChange={(e) => setFormData((p) => ({ ...p, hostel: e.target.value }))} placeholder="e.g. Amber" />
-              </div>
-              <div className="form-group">
-                <label>Room No.</label>
-                <input type="text" value={formData.roomNo} onChange={(e) => setFormData((p) => ({ ...p, roomNo: e.target.value }))} />
+                <input type="text" value={formData.batch} onChange={(e) => setFormData((p) => ({ ...p, batch: e.target.value }))} placeholder="e.g. 2024-2027" required />
               </div>
               <div className="form-group">
                 <label>D.O.B *</label>
@@ -340,32 +299,6 @@ export default function StudentFlow() {
                 <label>Parent/Guardian Mobile *</label>
                 <input type="tel" value={formData.parentMobile} onChange={(e) => setFormData((p) => ({ ...p, parentMobile: e.target.value }))} required />
               </div>
-            </div>
-            <h3>Address Details</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Address Line 1 *</label>
-                <input type="text" value={formData.addressLine1} onChange={(e) => setFormData((p) => ({ ...p, addressLine1: e.target.value }))} required />
-              </div>
-              <div className="form-group">
-                <label>Address Line 2</label>
-                <input type="text" value={formData.addressLine2} onChange={(e) => setFormData((p) => ({ ...p, addressLine2: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label>District *</label>
-                <input type="text" value={formData.district} onChange={(e) => setFormData((p) => ({ ...p, district: e.target.value }))} required />
-              </div>
-              <div className="form-group">
-                <label>State *</label>
-                <input type="text" value={formData.state} onChange={(e) => setFormData((p) => ({ ...p, state: e.target.value }))} required />
-              </div>
-              <div className="form-group">
-                <label>Pincode *</label>
-                <input type="text" value={formData.pinCode} onChange={(e) => setFormData((p) => ({ ...p, pinCode: e.target.value }))} maxLength={6} required />
-              </div>
-            </div>
-            <h3>Application Details</h3>
-            <div className="form-grid">
               <div className="form-group">
                 <label>Request Category *</label>
                 <select value={formData.requestCategory} onChange={(e) => setFormData((p) => ({ ...p, requestCategory: e.target.value }))} required>
@@ -449,16 +382,10 @@ export default function StudentFlow() {
             <div><strong>Roll No.:</strong> {rollNo}</div>
             <div><strong>Branch:</strong> {formData.branch}</div>
             <div><strong>Parent&apos;s Name:</strong> {formData.fatherName}</div>
-            <div><strong>Mother&apos;s Name:</strong> {formData.motherName}</div>
-            <div><strong>Programme:</strong> {formData.programme}</div>
-            <div><strong>Batch:</strong> {formData.batch}</div>
-            <div><strong>Semester:</strong> {formData.semester}</div>
-            <div><strong>Hostel:</strong> {formData.hostel} {formData.roomNo ? `(Room: ${formData.roomNo})` : ''}</div>
             <div><strong>Blood Group:</strong> {formData.bloodGroup}</div>
             <div><strong>D.O.B:</strong> {formatDate(formData.dob)}</div>
             <div><strong>Contact:</strong> {formData.phone}</div>
             <div><strong>Email:</strong> {email}</div>
-            <div><strong>Address:</strong> {formData.addressLine1}, {formData.district}, {formData.state} - {formData.pinCode}</div>
             <div><strong>Request Category:</strong> {formData.requestCategory}</div>
             <div><strong>Reason:</strong> {formData.reasonDetails}</div>
           </div>
