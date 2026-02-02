@@ -796,6 +796,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import StepIndicator from '../components/StepIndicator'
 import { authAPI, applicationAPI } from '../services/api'
+import { generateFacultyStaffPDF } from '../services/pdfGenerator'
 import './FacultyFlow.css'
 
 // Single flow steps for faculty/staff
@@ -892,43 +893,63 @@ export default function FacultyStaffFlow() {
   const [photoPreview, setPhotoPreview] = useState('')
   const fileInputRef = useRef(null)
   
-  const [formData, setFormData] = useState({
-    // Request details
-    requestCategory: '',
-    dataToChange: [],
-    otherDataChange: '',
-    
-    // Personal details
-    title: '',
-    staffName: '',
-    staffNo: '',
-    designation: '',
-    department: '',
-    dob: '',
-    joiningDate: '',
-    retirementDate: '',
-    gender: '',
-    bloodGroup: '',
-    
-    // Contact details
-    phone: '',
-    address: '',
-    
-    // Additional for specific categories
-    correctionDetails: '',
-    officeOrderAttached: false
+  const [formData, setFormData] = useState(() => {
+    const saved = localStorage.getItem('facultyFormData');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing saved facultyFormData:', e);
+      }
+    }
+    return {
+      // Request details
+      requestCategory: '',
+      dataToChange: [],
+      otherDataChange: '',
+
+      // Personal details
+      title: '',
+      staffName: '',
+      staffNo: '',
+      designation: '',
+      department: '',
+      dob: '',
+      joiningDate: '',
+      retirementDate: '',
+      gender: '',
+      bloodGroup: '',
+
+      // Contact details
+      phone: '',
+      address: '',
+
+      // Additional for specific categories
+      correctionDetails: '',
+      officeOrderAttached: false
+    };
   })
   
   // Check if user is already verified
   useEffect(() => {
     const token = localStorage.getItem('token')
     const savedEmail = localStorage.getItem('email')
+    const savedUserType = localStorage.getItem('userType')
     
+    // Check if verified and if userType matches (either faculty or staff)
     if (token && savedEmail) {
-      setVerifiedEmail(savedEmail)
-      setStep(1) // Skip verification if already verified
+      if (savedUserType === 'faculty' || savedUserType === 'staff') {
+        setVerifiedEmail(savedEmail)
+        setStep(1) // Skip verification if already verified
+      } else {
+        // Wrong user type (e.g. student), clear and stay on step 0
+        localStorage.removeItem('token')
+        localStorage.removeItem('email')
+        localStorage.removeItem('userType')
+        localStorage.removeItem('rollNo')
+      }
     }
-  }, [])
+  }, [type])
   
   // Department options
   const departmentOptions = [
@@ -1050,19 +1071,23 @@ export default function FacultyStaffFlow() {
   
   const handleInputChange = (e) => {
     const { name, value, type: inputType, checked } = e.target
+    let updatedData;
     
     if (inputType === 'checkbox') {
       if (name === 'dataToChange') {
-        const updatedData = formData.dataToChange.includes(value)
+        const updatedCheckboxData = formData.dataToChange.includes(value)
           ? formData.dataToChange.filter(item => item !== value)
           : [...formData.dataToChange, value]
-        setFormData(prev => ({ ...prev, dataToChange: updatedData }))
+        updatedData = { ...formData, dataToChange: updatedCheckboxData };
       } else {
-        setFormData(prev => ({ ...prev, [name]: checked }))
+        updatedData = { ...formData, [name]: checked };
       }
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }))
+      updatedData = { ...formData, [name]: value };
     }
+
+    setFormData(updatedData);
+    localStorage.setItem('facultyFormData', JSON.stringify(updatedData));
   }
   
   const handleFormSubmit = (e) => {
@@ -1117,21 +1142,20 @@ export default function FacultyStaffFlow() {
       // Add timestamp
       formDataToSend.append('submittedAt', new Date().toISOString())
       
-      // Generate application ID
+      // Generate application ID (will be overridden by backend but used for PDF)
       const year = new Date().getFullYear()
       const randomNum = Math.floor(10000 + Math.random() * 90000)
-      const applicationId = `NITT-${type.toUpperCase()}-${year}-${randomNum}`
-      formDataToSend.append('applicationId', applicationId)
+      const tempApplicationId = `NITT-${type.toUpperCase()}-${year}-${randomNum}`
       
-      // For testing - show what would be sent
-      console.log('Form data to send:', {
-        userType: type,
-        email: verifiedEmail,
+      // Generate application PDF
+      const pdfDoc = await generateFacultyStaffPDF({
         ...formData,
-        applicationId,
-        photo: photo ? photo.name : 'No photo'
-      })
-      
+        email: verifiedEmail,
+        userType: type
+      }, false);
+      const pdfBlob = pdfDoc.output('blob');
+      formDataToSend.append('applicationPdf', pdfBlob, `application_${formData.staffNo || tempApplicationId}.pdf`);
+
       // Submit to backend
       const result = await applicationAPI.submit(formDataToSend)
       const realApplicationId = result.applicationId || result.id || applicationId
@@ -1143,6 +1167,7 @@ export default function FacultyStaffFlow() {
       localStorage.removeItem('token')
       localStorage.removeItem('email')
       localStorage.removeItem('userType')
+      localStorage.removeItem('facultyFormData')
       
       // Navigate to success page
       navigate(`/success/${realApplicationId}`, { state: { application: result.application } })
@@ -1696,17 +1721,6 @@ export default function FacultyStaffFlow() {
             ← Edit Application
           </button>
           
-          <button
-            type="button"
-            onClick={() => generateFacultyStaffPdf({ 
-              ...formData, 
-              email: verifiedEmail,
-              photo: photo ? 'Yes' : 'No'
-            }, type)}
-            className="btn btn-secondary"
-          >
-            Download PDF
-          </button>
           
           <button
             type="button"

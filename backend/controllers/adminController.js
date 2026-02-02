@@ -1,5 +1,13 @@
+import mongoose from 'mongoose';
 import Application from '../models/Application.js';
 import Admin from '../models/Admin.js';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { deleteFromFirebase, isFirebaseEnabled } from '../config/firebase.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.join(__dirname, '../uploads');
 
 // ===== GET ALL APPLICATIONS =====
 export const getAllApplications = async (req, res) => {
@@ -101,13 +109,13 @@ export const updateApplicationStatus = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
-    const updateData = { status };
+    const updateData = { status, updatedAt: new Date() };
     if (status === 'rejected' && reason) {
       updateData.rejectionReason = reason;
     }
 
-    const application = await Application.findByIdAndUpdate(
-      id,
+    const application = await Application.findOneAndUpdate(
+      { $or: [{ _id: mongoose.Types.ObjectId.isValid(id) ? id : null }, { applicationId: id }] },
       updateData,
       { new: true }
     );
@@ -160,15 +168,58 @@ export const hardDeleteApplication = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const application = await Application.findByIdAndDelete(id);
+    // Find the application first to get file paths
+    const application = await Application.findOne({
+      $or: [{ _id: id }, { applicationId: id }]
+    });
 
     if (!application) {
       return res.status(404).json({ message: 'Application not found' });
     }
 
+    // List of file paths to delete
+    const filePaths = [
+      application.photoPath,
+      application.firPath,
+      application.paymentPath,
+      application.applicationPdfUrl
+    ].filter(Boolean);
+
+    // Delete from storage
+    for (const filePath of filePaths) {
+      try {
+        if (isFirebaseEnabled()) {
+          await deleteFromFirebase(filePath);
+        } else {
+          // Local storage
+          const fullPath = path.join(uploadsDir, filePath);
+          if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+          }
+        }
+      } catch (err) {
+        console.warn(`Failed to delete file ${filePath}:`, err.message);
+      }
+    }
+
+    // If local storage, also try to delete the directory
+    if (!isFirebaseEnabled() && application.applicationId) {
+      const dirPath = path.join(uploadsDir, application.applicationId);
+      if (fs.existsSync(dirPath)) {
+        try {
+          fs.rmSync(dirPath, { recursive: true, force: true });
+        } catch (err) {
+          console.warn(`Failed to delete directory ${dirPath}:`, err.message);
+        }
+      }
+    }
+
+    // Delete from database
+    await Application.findByIdAndDelete(application._id);
+
     res.json({
       success: true,
-      message: 'Application permanently deleted'
+      message: 'Application and all associated files permanently deleted'
     });
   } catch (error) {
     console.error('Hard delete error:', error);

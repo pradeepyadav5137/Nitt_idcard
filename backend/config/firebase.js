@@ -44,6 +44,19 @@ export async function uploadToFirebase(buffer, path, contentType) {
   return url;
 }
 
+export async function deleteFromFirebase(path) {
+  const app = initFirebase();
+  if (!app) return;
+
+  try {
+    const bucket = getStorage().bucket();
+    const file = bucket.file(path);
+    await file.delete();
+  } catch (err) {
+    console.error(`Firebase delete failed for ${path}:`, err.message);
+  }
+}
+
 export function isFirebaseEnabled() {
   return !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 }

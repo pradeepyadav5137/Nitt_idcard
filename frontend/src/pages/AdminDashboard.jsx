@@ -1203,8 +1203,8 @@
 
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { jsPDF } from 'jspdf'
 import { adminAPI } from '../services/api'
+import { generateStudentPDF, generateFacultyStaffPDF } from '../services/pdfGenerator'
 import './Admin.css'
 
 const FILE_BASE_URL = window.location.origin.includes('localhost') 
@@ -1228,93 +1228,6 @@ const formatDate = (value) => {
   }
 }
 
-const generateStudentPdf = (app) => {
-  const doc = new jsPDF('p', 'mm', 'a4')
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(14)
-  doc.text('NATIONAL INSTITUTE OF TECHNOLOGY TIRUCHIRAPPALLI', 105, 20, { align: 'center' })
-  doc.setFontSize(11)
-  doc.text('TAMIL NADU, INDIA-620015', 105, 26, { align: 'center' })
-
-  doc.setFontSize(12)
-  doc.text('STUDENT APPLICATION FOR DUPLICATE IDENTITY CARD', 105, 36, { align: 'center' })
-  doc.setFontSize(10)
-  doc.text('(to be filled by the student)', 105, 42, { align: 'center' })
-
-  let y = 55
-  const lineGap = 7
-  const addField = (label, value) => {
-    doc.setFont('helvetica', 'bold')
-    doc.text(label, 15, y)
-    doc.setFont('helvetica', 'normal')
-    doc.text(String(value || ''), 80, y)
-    y += lineGap
-  }
-
-  addField('Application ID', app.applicationId)
-  addField('Name of the Student', app.name)
-  addField('Roll No.', app.rollNo)
-  addField('Branch', app.branch)
-  addField("Parent's Name", app.fatherName)
-  addField('Blood Group', app.bloodGroup)
-  addField('D.O.B', formatDate(app.dob))
-  addField('Contact No.', app.phone)
-  addField('Email ID', app.email)
-  addField('Request Category', app.requestCategory)
-  addField('Reason / Details', app.reasonDetails)
-  addField('Status', app.status)
-
-  const filename = `${app.applicationId || app.rollNo || 'student'}_duplicate_id_application.pdf`
-  doc.save(filename)
-}
-
-const generateStaffPdf = (app) => {
-  const doc = new jsPDF('p', 'mm', 'a4')
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(14)
-  doc.text('NATIONAL INSTITUTE OF TECHNOLOGY TIRUCHIRAPPALLI', 105, 20, { align: 'center' })
-  doc.setFontSize(11)
-  doc.text('TAMIL NADU, INDIA-620015', 105, 26, { align: 'center' })
-
-  doc.setFontSize(12)
-  doc.text('STAFF APPLICATION FOR DUPLICATE IDENTITY CARD', 105, 36, { align: 'center' })
-  doc.setFontSize(10)
-  doc.text('(DESIGNATION/OTHER OFFICIAL CHANGES)', 105, 42, { align: 'center' })
-  doc.text('(to be filled by the staff)', 105, 48, { align: 'center' })
-
-  let y = 60
-  const lineGap = 7
-  const addField = (label, value) => {
-    doc.setFont('helvetica', 'bold')
-    doc.text(label, 15, y)
-    doc.setFont('helvetica', 'normal')
-    doc.text(String(value || ''), 80, y)
-    y += lineGap
-  }
-
-  addField('Application ID', app.applicationId)
-  addField('Name of the Staff', app.staffName || app.name)
-  addField('Staff No.', app.staffNo)
-  addField('Designation', app.designation)
-  addField('Title', app.title)
-  addField('Gender', app.gender)
-  addField('Blood Group', app.bloodGroup)
-  addField('Dept./ Section', app.department)
-  addField('D.O.B', formatDate(app.dob))
-  addField('Date of Joining', formatDate(app.joiningDate))
-  addField('Date of Retirement', formatDate(app.retirementDate))
-  addField('Contact No.', app.phone)
-  addField('Email ID', app.email)
-  addField('Request Category', app.requestCategory)
-  addField('Reason / Details', app.reasonDetails)
-  addField('Status', app.status)
-
-  const filename = `${app.applicationId || app.staffNo || 'staff'}_duplicate_id_application.pdf`
-  doc.save(filename)
-}
-
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const [applications, setApplications] = useState([])
@@ -1332,6 +1245,9 @@ export default function AdminDashboard() {
   const [addAdminLoading, setAddAdminLoading] = useState(false)
   const [addAdminSuccess, setAddAdminSuccess] = useState('')
 
+  const [admins, setAdmins] = useState([])
+  const [currentAdmin, setCurrentAdmin] = useState(null)
+
   useEffect(() => {
     const token = localStorage.getItem('adminToken')
     if (!token) {
@@ -1344,17 +1260,12 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     try {
-      const [appRes, statsRes] = await Promise.all([
-        // FIXED: Changed from adminAPI.getAll() to adminAPI.getApplications()
+      const [appRes, statsRes, adminsRes] = await Promise.all([
         adminAPI.getApplications(),
-        // FIXED: Changed from adminAPI.getStats() to adminAPI.getDashboardStats()
-        adminAPI.getDashboardStats()
+        adminAPI.getDashboardStats(),
+        adminAPI.getAllAdmins()
       ])
       
-      console.log('Applications response:', appRes)
-      console.log('Stats response:', statsRes)
-      
-      // Handle different response structures
       setApplications(appRes.applications || appRes || [])
       setStats(statsRes.stats || statsRes || { 
         total: 0, 
@@ -1362,9 +1273,14 @@ export default function AdminDashboard() {
         approved: 0, 
         rejected: 0 
       })
+      setAdmins(adminsRes.admins || [])
+
+      // Get current admin from localStorage
+      const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}')
+      setCurrentAdmin(adminUser)
+
     } catch (err) {
       console.error('Error fetching data:', err)
-      alert('Failed to fetch data: ' + err.message)
     }
     setLoading(false)
   }
@@ -1413,12 +1329,12 @@ export default function AdminDashboard() {
     setAddAdminSuccess('')
     setAddAdminLoading(true)
     try {
-      // Note: You might need to implement this function in your api.js
-      await adminAPI.addAdmin(addAdminUsername.trim(), addAdminEmail.trim(), addAdminPassword)
+      await adminAPI.createAdmin(addAdminUsername.trim(), addAdminEmail.trim(), addAdminPassword)
       setAddAdminSuccess('Admin added successfully.')
       setAddAdminUsername('')
       setAddAdminEmail('')
       setAddAdminPassword('')
+      fetchData() // Refresh list
       setTimeout(() => { 
         setShowAddAdmin(false); 
         setAddAdminSuccess(''); 
@@ -1427,6 +1343,31 @@ export default function AdminDashboard() {
       setAddAdminError(err.message || 'Failed to add admin')
     }
     setAddAdminLoading(false)
+  }
+
+  const handleDeleteAdmin = async (adminId) => {
+    if (!window.confirm('Are you sure you want to delete this admin?')) return
+
+    try {
+      await adminAPI.deleteAdmin(adminId)
+      alert('Admin deleted successfully')
+      fetchData()
+    } catch (err) {
+      alert(err.message || 'Failed to delete admin')
+    }
+  }
+
+  const handleHardDelete = async (appId) => {
+    if (!window.confirm('⚠ WARNING: This will permanently delete all data and files for this application. This action cannot be undone. Are you sure?')) return
+
+    try {
+      await adminAPI.hardDelete(appId)
+      alert('Application and all associated files deleted permanently')
+      setSelectedApp(null)
+      fetchData()
+    } catch (err) {
+      alert(err.message || 'Failed to delete application')
+    }
   }
 
   const filteredApps = filter === 'all' 
@@ -1472,54 +1413,90 @@ export default function AdminDashboard() {
         {/* Add Admin Form */}
         {showAddAdmin && (
           <div className="info-box admin-form" style={{ marginBottom: '30px' }}>
-            <h3>Add New Admin Account</h3>
-            {addAdminError && <div className="error-message">{addAdminError}</div>}
-            {addAdminSuccess && <div className="success-message">{addAdminSuccess}</div>}
-            <form onSubmit={handleAddAdmin}>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Username *</label>
-                  <input 
-                    type="text" 
-                    value={addAdminUsername} 
-                    onChange={(e) => setAddAdminUsername(e.target.value)} 
-                    placeholder="Enter username"
-                    required 
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Email *</label>
-                  <input 
-                    type="email" 
-                    value={addAdminEmail} 
-                    onChange={(e) => setAddAdminEmail(e.target.value)} 
-                    placeholder="admin@example.com"
-                    required 
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Password *</label>
-                  <input 
-                    type="password" 
-                    value={addAdminPassword} 
-                    onChange={(e) => setAddAdminPassword(e.target.value)} 
-                    minLength={6} 
-                    placeholder="Minimum 6 characters"
-                    required 
-                  />
+            <div className="admin-mgmt-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '30px' }}>
+              <div>
+                <h3>Add New Admin Account</h3>
+                {addAdminError && <div className="error-message">{addAdminError}</div>}
+                {addAdminSuccess && <div className="success-message">{addAdminSuccess}</div>}
+                <form onSubmit={handleAddAdmin}>
+                  <div className="form-group">
+                    <label>Username *</label>
+                    <input
+                      type="text"
+                      value={addAdminUsername}
+                      onChange={(e) => setAddAdminUsername(e.target.value)}
+                      placeholder="Enter username"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Email *</label>
+                    <input
+                      type="email"
+                      value={addAdminEmail}
+                      onChange={(e) => setAddAdminEmail(e.target.value)}
+                      placeholder="admin@example.com"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Password *</label>
+                    <input
+                      type="password"
+                      value={addAdminPassword}
+                      onChange={(e) => setAddAdminPassword(e.target.value)}
+                      minLength={6}
+                      placeholder="Minimum 6 characters"
+                      required
+                    />
+                  </div>
+                  <div className="button-group" style={{ marginTop: '20px' }}>
+                    <button type="submit" disabled={addAdminLoading} className="btn btn-primary">
+                      {addAdminLoading ? 'Adding...' : 'Add Admin'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div>
+                <h3>Manage Existing Admins</h3>
+                <div className="admin-list" style={{ marginTop: '15px' }}>
+                  {admins.length === 0 ? (
+                    <p>No other admins found</p>
+                  ) : (
+                    <table style={{ width: '100%', fontSize: '14px' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ textAlign: 'left' }}>Username</th>
+                          <th style={{ textAlign: 'left' }}>Email</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {admins.map(admin => (
+                          <tr key={admin._id}>
+                            <td>{admin.username}</td>
+                            <td>{admin.email}</td>
+                            <td style={{ textAlign: 'center' }}>
+                              {admin.username !== currentAdmin?.username ? (
+                                <button
+                                  onClick={() => handleDeleteAdmin(admin._id)}
+                                  style={{ background: 'none', border: 'none', color: '#e53e3e', cursor: 'pointer' }}
+                                >
+                                  Delete
+                                </button>
+                              ) : (
+                                <span style={{ color: '#718096', fontSize: '12px' }}>(You)</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
-              <div className="button-group" style={{ marginTop: '20px' }}>
-                <button type="submit" disabled={addAdminLoading} className="btn btn-primary">
-                  {addAdminLoading ? (
-                    <>
-                      <span className="loading-spinner" style={{ marginRight: '8px' }}></span>
-                      Adding...
-                    </>
-                  ) : 'Add Admin'}
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
         )}
 
@@ -1723,6 +1700,10 @@ export default function AdminDashboard() {
                         <label>Parent's Name</label>
                         <div className="detail-value">{selectedApp.fatherName || 'N/A'}</div>
                       </div>
+                      <div className="form-group">
+                        <label>No. of Issued Books</label>
+                        <div className="detail-value">{selectedApp.issuedBooks || '0'}</div>
+                      </div>
                     </>
                   ) : (
                     <>
@@ -1764,6 +1745,14 @@ export default function AdminDashboard() {
                     <label>Reason / Details</label>
                     <div className="detail-value">{selectedApp.reasonDetails || 'No details provided'}</div>
                   </div>
+                  {selectedApp.status === 'rejected' && (
+                    <div className="form-group full-width">
+                      <label style={{ color: '#e53e3e' }}>Rejection Reason</label>
+                      <div className="detail-value" style={{ borderColor: '#feb2b2', backgroundColor: '#fff5f5' }}>
+                        {selectedApp.rejectionReason || 'No reason specified'}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1842,19 +1831,27 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="action-section">
+              <div className="action-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <button
                   className="btn btn-secondary"
-                  onClick={() => {
+                  onClick={async () => {
                     if (!selectedApp) return
                     if (selectedApp.userType === 'student') {
-                      generateStudentPdf(selectedApp)
+                      await generateStudentPDF(selectedApp)
                     } else {
-                      generateStaffPdf(selectedApp)
+                      await generateFacultyStaffPDF(selectedApp)
                     }
                   }}
                 >
                   📥 Download Application PDF
+                </button>
+
+                <button
+                  className="btn btn-danger"
+                  style={{ backgroundColor: '#fed7d7', color: '#822727', border: '1px solid #feb2b2' }}
+                  onClick={() => handleHardDelete(selectedApp.applicationId)}
+                >
+                  🗑 Permanent Delete
                 </button>
               </div>
 

@@ -5,36 +5,47 @@ import './StudentFlow.css'
 
 export default function StudentForm() {
   const navigate = useNavigate()
-  const [formData, setFormData] = useState({
-    // Personal Information
-    name: '',
-    rollNo: localStorage.getItem('rollNo') || '',
-    fatherName: '',
-    motherName: '',
-    dob: '',
-    gender: '',
-    bloodGroup: '',
+  const [formData, setFormData] = useState(() => {
+    const savedData = localStorage.getItem('formData');
+    if (savedData) {
+      try {
+        return JSON.parse(savedData);
+      } catch (e) {
+        console.error('Error parsing saved formData:', e);
+      }
+    }
+    return {
+      // Personal Information
+      name: '',
+      rollNo: localStorage.getItem('rollNo') || '',
+      fatherName: '',
+      motherName: '',
+      dob: '',
+      gender: '',
+      bloodGroup: '',
 
-    // Contact Information
-    email: localStorage.getItem('email') || '',
-    phone: '',
-    parentMobile: '',
-    permanentAddress: '',
+      // Contact Information
+      email: localStorage.getItem('email') || '',
+      phone: '',
+      parentMobile: '',
+      permanentAddress: '',
 
-    // Academic Information
-    programme: '',
-    branch: '',
-    batch: '',
-    semester: '',
-    hostel: '',
-    roomNo: '',
+      // Academic Information
+      programme: '',
+      branch: '',
+      batch: '',
+      semester: '',
+      hostel: '',
+      roomNo: '',
+      issuedBooks: '',
 
-    // Request Details
-    requestCategory: '',
-    reasonDetails: '',
-    firNumber: '',
-    firDate: '',
-    policeStation: ''
+      // Request Details
+      requestCategory: '',
+      reasonDetails: '',
+      firNumber: '',
+      firDate: '',
+      policeStation: ''
+    };
   })
 
   const [errors, setErrors] = useState({})
@@ -43,15 +54,27 @@ export default function StudentForm() {
     // Check if user is verified
     const token = localStorage.getItem('token')
     const email = localStorage.getItem('email')
+    const userType = localStorage.getItem('userType')
 
-    if (!token || !email) {
+    if (!token || !email || userType !== 'student') {
+      // If not student or not verified, clear and redirect
+      if (userType !== 'student') {
+        localStorage.removeItem('token')
+        localStorage.removeItem('email')
+        localStorage.removeItem('userType')
+        localStorage.removeItem('rollNo')
+      }
       navigate('/apply/student')
     }
   }, [navigate])
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    const updatedData = { ...formData, [name]: value };
+    setFormData(updatedData)
+
+    // Save to localStorage immediately for persistence
+    localStorage.setItem('formData', JSON.stringify(updatedData));
 
     // Clear error for this field
     if (errors[name]) {
@@ -482,6 +505,22 @@ export default function StudentForm() {
                 value={formData.roomNo}
                 onChange={handleChange}
                 placeholder="e.g., 101"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="issuedBooks">
+                No. of Issued Books <span className="required">*</span>
+              </label>
+              <input
+                type="number"
+                id="issuedBooks"
+                name="issuedBooks"
+                value={formData.issuedBooks}
+                onChange={handleChange}
+                placeholder="0"
+                min="0"
+                required
               />
             </div>
           </div>

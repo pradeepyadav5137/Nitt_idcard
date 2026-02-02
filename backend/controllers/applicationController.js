@@ -2,7 +2,9 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import Application from '../models/Application.js';
+import Admin from '../models/Admin.js';
 import { uploadToFirebase, isFirebaseEnabled } from '../config/firebase.js';
+import { sendMail } from '../config/nodemailer.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, '../uploads');
@@ -54,6 +56,7 @@ export const submitApplication = async (req, res) => {
       programme: body.programme,
       branch: body.branch,
       batch: body.batch,
+      issuedBooks: body.issuedBooks,
       staffNo: body.staffNo,
       staffName: body.staffName,
       title: body.title,
@@ -93,6 +96,43 @@ export const submitApplication = async (req, res) => {
 
     const application = new Application(applicationData);
     await application.save();
+
+    // Send email to user
+    try {
+      await sendMail(
+        application.email,
+        'NITT ID Card Application Submitted',
+        `Your application for a duplicate ID card has been submitted successfully.\n\nApplication ID: ${applicationId}\n\nYou can track your application status on our portal using this ID.`,
+        `<p>Your application for a duplicate ID card has been submitted successfully.</p>
+         <p><strong>Application ID: ${applicationId}</strong></p>
+         <p>You can track your application status on our portal using this ID.</p>`
+      );
+    } catch (mailError) {
+      console.error('Error sending confirmation email to user:', mailError);
+    }
+
+    // Notify all admins
+    try {
+      const admins = await Admin.find({ email: { $exists: true } });
+      const adminEmails = admins.map(admin => admin.email).filter(Boolean);
+
+      if (adminEmails.length > 0) {
+        await sendMail(
+          adminEmails,
+          'New ID Card Application Received',
+          `A new duplicate ID card application has been received.\n\nApplication ID: ${applicationId}\nApplicant: ${application.name || application.staffName}\nType: ${userType}`,
+          `<p>A new duplicate ID card application has been received.</p>
+           <ul>
+             <li><strong>Application ID:</strong> ${applicationId}</li>
+             <li><strong>Applicant:</strong> ${application.name || application.staffName}</li>
+             <li><strong>User Type:</strong> ${userType}</li>
+           </ul>
+           <p><a href="${process.env.ADMIN_URL || 'http://localhost:5173/admin/dashboard'}">Login to Admin Panel</a> to review.</p>`
+        );
+      }
+    } catch (adminMailError) {
+      console.error('Error notifying admins via email:', adminMailError);
+    }
 
     res.json({
       success: true,
