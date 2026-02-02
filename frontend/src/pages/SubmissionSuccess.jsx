@@ -33,11 +33,11 @@ export default function SubmissionSuccess() {
   const handleDownloadPDF = () => {
     if (!application) return
 
-    if (application.userType === 'student') {
-      generateStudentPDF(application)
-    } else {
-      generateFacultyStaffPDF(application)
-    }
+    const doc = application.userType === 'student'
+      ? generateStudentPDF(application)
+      : generateFacultyStaffPDF(application);
+
+    doc.save(`${application.applicationId || 'application'}.pdf`);
   }
 
   return (
