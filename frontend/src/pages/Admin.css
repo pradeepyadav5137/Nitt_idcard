@@ -496,16 +496,10 @@
   letter-spacing: 0.5px;
 }
 
-.status-pending, .status-submitted {
+.status-pending {
   background: #fff3cd;
   color: #856404;
   border: 1px solid #ffeaa7;
-}
-
-.status-processed {
-  background: #ebf8ff;
-  color: #2c5282;
-  border: 1px solid #bee3f8;
 }
 
 .status-approved {

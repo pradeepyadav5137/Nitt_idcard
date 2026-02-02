@@ -464,7 +464,7 @@ export const adminAPI = {
   },
 
   // Create New Admin
-  addAdmin: async (username, email, password) => {
+  createAdmin: async (username, email, password) => {
     try {
       console.log('📤 Creating admin:', { username, email })
       

@@ -3,31 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { authAPI } from '../services/api'
 import './StudentFlow.css'
 
-import { useEffect } from 'react'
-
 export default function EmailVerification() {
   const { userType } = useParams()
   const navigate = useNavigate()
-
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    const savedUserType = localStorage.getItem('userType')
-
-    if (token && savedUserType === userType) {
-      // Already verified for this type
-      const formPath = {
-        student: '/apply/student',
-        faculty: '/apply/faculty-staff',
-        staff: '/apply/faculty-staff'
-      }[userType] || '/'
-      navigate(formPath)
-    } else if (token && savedUserType !== userType) {
-      // Different type, clear
-      localStorage.removeItem('token')
-      localStorage.removeItem('email')
-      localStorage.removeItem('userType')
-    }
-  }, [userType, navigate])
   const [email, setEmail] = useState('')
   const [rollNo, setRollNo] = useState('')
   const [otp, setOtp] = useState('')
@@ -87,10 +65,10 @@ export default function EmailVerification() {
 
       // Navigate to appropriate form
       const formPath = {
-        student: '/apply/student',
-        faculty: '/apply/faculty-staff',
-        staff: '/apply/faculty-staff'
-      }[userType] || '/'
+        student: '/student-form',
+        faculty: '/faculty-form',
+        staff: '/faculty-form'
+      }[userType]
 
       navigate(formPath)
     } catch (err) {
