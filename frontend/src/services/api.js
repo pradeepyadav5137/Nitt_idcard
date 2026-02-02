@@ -479,6 +479,28 @@ export const adminAPI = {
       console.error('❌ Create Admin Error:', error.response?.data || error.message)
       throw error.response?.data || { message: 'Failed to create admin' }
     }
+  },
+
+  // Get All Admins
+  getAllAdmins: async () => {
+    try {
+      const response = await api.get('/admin/admins')
+      return response.data
+    } catch (error) {
+      console.error('❌ Get Admins Error:', error.response?.data || error.message)
+      throw error.response?.data || { message: 'Failed to fetch admins' }
+    }
+  },
+
+  // Delete Admin
+  deleteAdmin: async (id) => {
+    try {
+      const response = await api.delete(`/admin/admins/${id}`)
+      return response.data
+    } catch (error) {
+      console.error('❌ Delete Admin Error:', error.response?.data || error.message)
+      throw error.response?.data || { message: 'Failed to delete admin' }
+    }
   }
 }
 

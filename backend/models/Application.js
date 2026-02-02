@@ -24,6 +24,7 @@ const applicationSchema = new mongoose.Schema({
   programme: String,
   branch: String,
   batch: String,
+  issuedBooks: Number,
   
   // Faculty/Staff fields
   staffNo: String,
@@ -68,6 +69,12 @@ const applicationSchema = new mongoose.Schema({
     default: 'pending'
   },
   adminNotes: String,
+  rejectionReason: String,
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedAt: Date,
   
   createdAt: {
     type: Date,

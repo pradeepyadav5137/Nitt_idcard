@@ -30,13 +30,13 @@ export default function SubmissionSuccess() {
     }
   }, [applicationId, application])
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     if (!application) return
 
     if (application.userType === 'student') {
-      generateStudentPDF(application)
+      await generateStudentPDF(application)
     } else {
-      generateFacultyStaffPDF(application)
+      await generateFacultyStaffPDF(application)
     }
   }
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import { applicationAPI } from '../services/api'
+import { generateStudentPDF } from '../services/pdfGenerator'
 
 const PreviewNew = () => {
   const navigate = useNavigate()
@@ -61,6 +62,11 @@ const PreviewNew = () => {
       if (files.fir) form.append('fir', files.fir)
       if (files.payment) form.append('payment', files.payment)
 
+      // Generate application PDF
+      const pdfDoc = await generateStudentPDF(formData, false);
+      const pdfBlob = pdfDoc.output('blob');
+      form.append('applicationPdf', pdfBlob, `application_${formData.rollNo}.pdf`);
+
       const response = await applicationAPI.submit(form)
       const applicationId = response.applicationId || response.id
 
@@ -108,6 +114,7 @@ const PreviewNew = () => {
       ['Semester', formData.semester],
       ['Hostel', formData.hostel || 'Not provided'],
       ['Room No', formData.roomNo || 'Not provided'],
+      ['No. of Issued Books', formData.issuedBooks || '0'],
       ['Request Category', formData.requestCategory],
       ['Reason Details', formData.reasonDetails || 'Not provided'],
       ['FIR Number', formData.firNumber || 'Not provided'],
@@ -542,6 +549,25 @@ const PreviewNew = () => {
               background: '#f8fafc'
             }}>
               {formData.roomNo || 'Not provided'}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '15px' }}>
+            <div style={{
+              fontSize: '14px',
+              color: '#4a5568',
+              marginBottom: '5px',
+              fontWeight: '500'
+            }}>
+              No. of Issued Books
+            </div>
+            <div style={{
+              padding: '12px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '4px',
+              background: '#f8fafc'
+            }}>
+              {formData.issuedBooks || '0'}
             </div>
           </div>
         </div>

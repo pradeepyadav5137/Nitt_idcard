@@ -9,6 +9,7 @@ import PreviewNew from './pages/PreviewNew'
 import SuccessPage from './pages/SubmissionSuccess'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminLogin from './pages/AdminLogin'
+import TrackApplication from './pages/TrackApplication'
 
 // In your Routes
 
@@ -31,6 +32,7 @@ function App() {
           <Route path="/apply/faculty-staff" element={<FacultyStaffFlow />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/track/:applicationId" element={<TrackApplication />} />
 
 
 
