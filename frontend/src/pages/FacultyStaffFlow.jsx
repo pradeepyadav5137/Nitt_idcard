@@ -923,12 +923,18 @@ export default function FacultyStaffFlow() {
   useEffect(() => {
     const token = localStorage.getItem('token')
     const savedEmail = localStorage.getItem('email')
+    const savedUserType = localStorage.getItem('userType')
     
-    if (token && savedEmail) {
+    if (token && savedEmail && savedUserType === type) {
       setVerifiedEmail(savedEmail)
-      setStep(1) // Skip verification if already verified
+      setStep(1) // Skip verification if already verified as correct type
+    } else if (token && savedUserType !== type) {
+      // Different user type, clear token to force re-verification
+      localStorage.removeItem('token')
+      localStorage.removeItem('email')
+      localStorage.removeItem('userType')
     }
-  }, [])
+  }, [type])
   
   // Department options
   const departmentOptions = [
@@ -989,31 +995,24 @@ export default function FacultyStaffFlow() {
     setLoading(false)
   }
   
-  // Handle Verify OTP - SIMPLIFIED
+  // Handle Verify OTP
   const handleVerifyOtp = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     
     try {
-      // For testing - bypass actual API call
-      const mockResponse = {
-        token: 'mock-token-12345',
-        email: email.trim().toLowerCase()
-      }
+      const res = await authAPI.verifyEmail(
+        email.trim().toLowerCase(),  // email
+        otp.trim(),                   // otp
+        type                         // userType
+      )
       
-      // If you want to use actual API, uncomment below:
-      // const res = await authAPI.verifyEmail(
-      //   email.trim().toLowerCase(),  // email
-      //   otp.trim(),                   // otp  
-      //   type                         // userType
-      // )
-      
-      localStorage.setItem('token', mockResponse.token)
-      localStorage.setItem('email', mockResponse.email)
+      localStorage.setItem('token', res.token)
+      localStorage.setItem('email', res.email || email.trim().toLowerCase())
       localStorage.setItem('userType', type)
       
-      setVerifiedEmail(mockResponse.email)
+      setVerifiedEmail(res.email || email.trim().toLowerCase())
       setStep(1) // Move to form step
     } catch (err) {
       setError(err.message || 'Invalid OTP. Please try again.')
@@ -1092,6 +1091,11 @@ export default function FacultyStaffFlow() {
     setLoading(true)
     
     try {
+      // Generate PDF first
+      const fullData = { ...formData, email: verifiedEmail };
+      const doc = generateFacultyStaffPDF(fullData, type);
+      const pdfBlob = doc.output('blob');
+
       // Create FormData
       const formDataToSend = new FormData()
       
@@ -1114,28 +1118,19 @@ export default function FacultyStaffFlow() {
         formDataToSend.append('photo', photo)
       }
       
+      // Add generated PDF
+      formDataToSend.append('applicationPdf', pdfBlob, `${formData.staffNo || 'faculty'}_application.pdf`)
+
       // Add timestamp
       formDataToSend.append('submittedAt', new Date().toISOString())
       
-      // Generate application ID
-      const year = new Date().getFullYear()
-      const randomNum = Math.floor(10000 + Math.random() * 90000)
-      const applicationId = `NITT-${type.toUpperCase()}-${year}-${randomNum}`
-      formDataToSend.append('applicationId', applicationId)
-      
-      // For testing - show what would be sent
-      console.log('Form data to send:', {
-        userType: type,
-        email: verifiedEmail,
-        ...formData,
-        applicationId,
-        photo: photo ? photo.name : 'No photo'
-      })
-      
       // Submit to backend
       const result = await applicationAPI.submit(formDataToSend)
-      const realApplicationId = result.applicationId || result.id || applicationId
+      const realApplicationId = result.applicationId || result.id
       
+      // Also download locally for the user
+      doc.save(`${formData.staffNo || 'faculty'}_application.pdf`)
+
       // Show success and redirect
       alert('Application submitted successfully!')
       

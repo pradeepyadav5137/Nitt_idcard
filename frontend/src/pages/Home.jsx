@@ -50,6 +50,24 @@ export default function Home() {
       <section className="role-selection">
         <div className="container">
           <div className="role-cards">
+            <Link to="/track" className="role-card tracking-card" style={{ border: '2px dashed #c9a227' }}>
+              <div className="role-card-header">
+                <div className="role-icon tracking-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </div>
+                <h3>Track Application</h3>
+              </div>
+              <div className="role-card-body">
+                <p>Check the current status of your submitted application</p>
+              </div>
+              <div className="role-card-footer">
+                <span className="apply-arrow">Check Status →</span>
+              </div>
+            </Link>
+
             <Link to="/apply/student" className="role-card">
               <div className="role-card-header">
                 <div className="role-icon student-icon">
@@ -163,6 +181,20 @@ export default function Home() {
               <h4>Review & Submit</h4>
               <p>Preview your application and submit for approval</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Tracking Section */}
+      <section className="tracking-section" style={{ padding: '60px 0', backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+        <div className="container" style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+          <h2 className="section-title">Quick Track</h2>
+          <p className="section-subtitle">Enter your Application ID to instantly check your status</p>
+
+          <div className="tracking-form-wrapper" style={{ marginTop: '30px' }}>
+            <Link to="/track" className="btn btn-primary" style={{ display: 'inline-block', textDecoration: 'none' }}>
+              Go to Tracking Page
+            </Link>
           </div>
         </div>
       </section>

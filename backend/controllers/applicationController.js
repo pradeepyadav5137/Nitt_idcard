@@ -45,51 +45,37 @@ export const submitApplication = async (req, res) => {
     const applicationId = generateAppId(userType);
 
     const applicationData = {
+      ...body,
       applicationId,
       userType,
-      email: body.email,
-      rollNo: body.rollNo,
-      name: body.name,
-      fatherName: body.fatherName,
-      programme: body.programme,
-      branch: body.branch,
-      batch: body.batch,
-      staffNo: body.staffNo,
-      staffName: body.staffName,
-      title: body.title,
-      designation: body.designation,
-      department: body.department,
-      joiningDate: body.joiningDate || undefined,
-      phone: body.phone,
-      dob: body.dob || undefined,
-      gender: body.gender,
-      bloodGroup: body.bloodGroup,
-      addressLine1: body.addressLine1,
-      addressLine2: body.addressLine2,
-      district: body.district,
-      state: body.state,
-      pinCode: body.pinCode,
-      requestCategory: body.requestCategory,
-      reasonDetails: body.reasonDetails,
-      photoPath: null,
-      firPath: null,
-      paymentPath: null,
-      applicationPdfUrl: null
+      status: 'submitted'
     };
 
+    // Clean up dates and empty strings
+    Object.keys(applicationData).forEach(key => {
+      if (applicationData[key] === '' || applicationData[key] === 'null' || applicationData[key] === 'undefined') {
+        delete applicationData[key];
+      }
+    });
+
+    // Handle files
     const files = req.files || {};
-    if (files.photo?.[0]) {
+    console.log('Received files:', Object.keys(files));
+
+    if (files.photo && files.photo[0]) {
       applicationData.photoPath = await saveFile('photo', files.photo[0], applicationId);
     }
-    if (files.fir?.[0]) {
+    if (files.fir && files.fir[0]) {
       applicationData.firPath = await saveFile('fir', files.fir[0], applicationId);
     }
-    if (files.payment?.[0]) {
+    if (files.payment && files.payment[0]) {
       applicationData.paymentPath = await saveFile('payment', files.payment[0], applicationId);
     }
-    if (files.applicationPdf?.[0]) {
+    if (files.applicationPdf && files.applicationPdf[0]) {
       applicationData.applicationPdfUrl = await saveFile('applicationPdf', files.applicationPdf[0], applicationId);
     }
+
+    console.log('Application data to save:', { ...applicationData, photoPath: !!applicationData.photoPath });
 
     const application = new Application(applicationData);
     await application.save();
